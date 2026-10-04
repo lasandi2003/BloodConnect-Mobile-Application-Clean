@@ -300,12 +300,14 @@ export default function RootNavigator() {
     useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSplashFinished(true);
-    }, 1300);
+  const timer = setTimeout(() => {
+    setSplashFinished(true);
+  }, 2500);
 
-    return () => clearTimeout(timer);
-  }, []);
+  return () => {
+    clearTimeout(timer);
+  };
+}, []);
 
   if (initializing || !splashFinished) {
     return <SplashScreen />;
