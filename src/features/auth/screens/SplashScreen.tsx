@@ -1,14 +1,12 @@
 import React from 'react';
 
 import {
+  ActivityIndicator,
+  Image,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-
-import {
-  Ionicons,
-} from '@expo/vector-icons';
 
 import {
   COLORS,
@@ -16,94 +14,98 @@ import {
 
 export default function SplashScreen() {
   return (
-    <View
-      style={
-        styles.container
-      }
-    >
-      <View
-        style={
-          styles.logo
-        }
-      >
-        <Ionicons
-          name="water"
-          size={78}
-          color={
-            COLORS.white
-          }
-        />
-
-        <Ionicons
-          name="heart"
-          size={40}
-          color={
-            COLORS.white
-          }
-          style={
-            styles.heart
-          }
+    <View style={styles.container}>
+      <View style={styles.logoContainer}>
+        <Image
+          source={require('../../../../assets/bloodconnect-logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
         />
       </View>
 
-      <Text
-        style={
-          styles.title
-        }
-      >
+      <Text style={styles.title}>
         BloodConnect
       </Text>
 
-      <Text
-        style={
-          styles.subtitle
-        }
-      >
-        Donate Blood,
-        Save Lives
+      <Text style={styles.tagline}>
+        Donate Blood. Save Lives.
+      </Text>
+
+      <ActivityIndicator
+        size="small"
+        color={COLORS.white}
+        style={styles.loader}
+      />
+
+      <Text style={styles.footer}>
+        Connecting donors when every second matters
       </Text>
     </View>
   );
 }
 
-const styles =
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor:
-        COLORS.primaryDark,
-      justifyContent:
-        'center',
-      alignItems:
-        'center',
-    },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.primaryDark,
 
-    logo: {
-      width: 130,
-      height: 130,
-      justifyContent:
-        'center',
-      alignItems:
-        'center',
-    },
+    justifyContent: 'center',
+    alignItems: 'center',
 
-    heart: {
-      position:
-        'absolute',
-    },
+    paddingHorizontal: 30,
+  },
 
-    title: {
-      marginTop: 18,
-      color:
-        COLORS.white,
-      fontSize: 29,
-      fontWeight: '800',
-    },
+  logoContainer: {
+    width: 205,
+    height: 205,
 
-    subtitle: {
-      marginTop: 7,
-      color:
-        COLORS.white,
-      fontSize: 14,
-    },
-  });
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    marginBottom: 20,
+  },
+
+  logo: {
+    width: 205,
+    height: 205,
+
+    borderRadius: 28,
+  },
+
+  title: {
+    fontSize: 34,
+    fontWeight: '900',
+
+    color: COLORS.white,
+
+    letterSpacing: 0.3,
+
+    textAlign: 'center',
+  },
+
+  tagline: {
+    marginTop: 9,
+
+    fontSize: 15,
+    fontWeight: '500',
+
+    color: '#FBE7E9',
+
+    textAlign: 'center',
+  },
+
+  loader: {
+    marginTop: 38,
+  },
+
+  footer: {
+    position: 'absolute',
+    bottom: 42,
+
+    fontSize: 11,
+
+    color: '#EFC8CD',
+
+    textAlign: 'center',
+  },
+});

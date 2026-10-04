@@ -1,8 +1,10 @@
 import React, {
   type ComponentProps,
+  useState,
 } from 'react';
 
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,15 +44,10 @@ type IconName =
   >['name'];
 
 interface RoleOption {
-  role:
-    RegistrationRole;
-
+  role: RegistrationRole;
   title: string;
-
   description: string;
-
-  icon:
-    IconName;
+  icon: IconName;
 }
 
 const roles: RoleOption[] = [
@@ -61,7 +58,6 @@ const roles: RoleOption[] = [
       'Donate blood & save lives',
     icon: 'water-outline',
   },
-
   {
     role: 'requester',
     title:
@@ -70,7 +66,6 @@ const roles: RoleOption[] = [
       'Request blood for patients',
     icon: 'business-outline',
   },
-
   {
     role: 'healthcare',
     title:
@@ -79,11 +74,9 @@ const roles: RoleOption[] = [
       'Verify & manage requests',
     icon: 'medkit-outline',
   },
-
   {
     role: 'bloodBank',
-    title:
-      'Blood Bank / Admin',
+    title: 'Blood Bank',
     description:
       'Manage inventory & logs',
     icon: 'server-outline',
@@ -92,17 +85,21 @@ const roles: RoleOption[] = [
 
 export default function RoleSelectionScreen({
   navigation,
-  route,
 }: Props) {
+  const [
+    hoveredRole,
+    setHoveredRole,
+  ] = useState<
+    RegistrationRole | null
+  >(null);
+
   function selectRole(
-    role:
-      RegistrationRole,
+    role: RegistrationRole,
   ) {
     navigation.navigate(
       'Register',
       {
         role,
-        mode: route.params?.mode ?? 'email',
       },
     );
   }
@@ -112,49 +109,53 @@ export default function RoleSelectionScreen({
       contentContainerStyle={
         styles.container
       }
+      showsVerticalScrollIndicator={
+        false
+      }
     >
-      <Pressable
-        style={
-          styles.backButton
-        }
-        onPress={() =>
-          navigation.goBack()
-        }
-      >
-        <Ionicons
-          name="chevron-back"
-          size={22}
-          color={
-            COLORS.text
+      {/* Top Header */}
+      <View style={styles.topRow}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.backButton,
+
+            pressed &&
+              styles.backButtonPressed,
+          ]}
+          onPress={() =>
+            navigation.goBack()
           }
-        />
-      </Pressable>
+        >
+          <Ionicons
+            name="chevron-back"
+            size={22}
+            color={COLORS.text}
+          />
+        </Pressable>
 
-      <Text
-        style={
-          styles.smallHeading
-        }
-      >
-        Select Your Role
-      </Text>
+        <Text
+          style={
+            styles.smallHeading
+          }
+        >
+          Select Your Role
+        </Text>
+      </View>
 
+      {/* Main Heading */}
       <View
         style={
           styles.headingContainer
         }
       >
         <Text
-          style={
-            styles.title
-          }
+          style={styles.title}
         >
           Who are you?
         </Text>
 
         <Text
-          style={
-            styles.subtitle
-          }
+          style={styles.subtitle}
         >
           Select your primary
           role to customize your
@@ -163,77 +164,133 @@ export default function RoleSelectionScreen({
         </Text>
       </View>
 
-      <View
-        style={
-          styles.grid
-        }
-      >
-        {roles.map(
-          item => (
+      {/* Role Cards */}
+      <View style={styles.grid}>
+        {roles.map(item => {
+          const isHovered =
+            hoveredRole ===
+            item.role;
+
+          return (
             <Pressable
-              key={
-                item.role
-              }
-              style={
-                styles.card
-              }
+              key={item.role}
               onPress={() =>
                 selectRole(
                   item.role,
                 )
               }
+              onHoverIn={() =>
+                setHoveredRole(
+                  item.role,
+                )
+              }
+              onHoverOut={() =>
+                setHoveredRole(
+                  null,
+                )
+              }
+              style={({ pressed }) => {
+                const isActive =
+                  isHovered ||
+                  pressed;
+
+                return [
+                  styles.card,
+
+                  isActive &&
+                    styles.cardActive,
+
+                  pressed &&
+                    styles.cardPressed,
+                ];
+              }}
             >
-              <View
-                style={
-                  styles.iconCircle
-                }
-              >
-                <Ionicons
-                  name={
-                    item.icon
-                  }
-                  size={23}
-                  color={
-                    item.role ===
-                    'donor'
-                      ? COLORS.primary
-                      : COLORS.text
-                  }
-                />
-              </View>
+              {({
+                pressed,
+              }) => {
+                const isActive =
+                  isHovered ||
+                  pressed;
 
-              <Text
-                style={
-                  styles.cardTitle
-                }
-              >
-                {item.title}
-              </Text>
+                return (
+                  <>
+                    {/* Icon */}
+                    <View
+                      style={[
+                        styles.iconCircle,
 
-              <Text
-                style={
-                  styles.cardDescription
-                }
-              >
-                {
-                  item.description
-                }
-              </Text>
+                        isActive &&
+                          styles.iconCircleActive,
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          item.icon
+                        }
+                        size={22}
+                        color={
+                          isActive
+                            ? COLORS.primary
+                            : COLORS.text
+                        }
+                      />
+                    </View>
+
+                    {/* Role Title */}
+                    <Text
+                      style={[
+                        styles.cardTitle,
+
+                        isActive &&
+                          styles.cardTitleActive,
+                      ]}
+                    >
+                      {item.title}
+                    </Text>
+
+                    {/* Role Description */}
+                    <Text
+                      style={
+                        styles.cardDescription
+                      }
+                    >
+                      {
+                        item.description
+                      }
+                    </Text>
+                  </>
+                );
+              }}
             </Pressable>
-          ),
-        )}
+          );
+        })}
       </View>
 
-      <Text
+      {/* Admin Notice */}
+      <View
         style={
-          styles.adminNote
+          styles.adminInfo
         }
       >
-        System administrator
-        accounts are created
-        separately and cannot be
-        self-registered.
-      </Text>
+        <Ionicons
+          name="shield-checkmark-outline"
+          size={17}
+          color={
+            COLORS.primary
+          }
+        />
+
+        <Text
+          style={
+            styles.adminNote
+          }
+        >
+          System administrator
+          accounts are created
+          separately and cannot
+          be self-registered.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -242,111 +299,256 @@ const styles =
   StyleSheet.create({
     container: {
       flexGrow: 1,
+
       backgroundColor:
         COLORS.softBackground,
-      paddingHorizontal: 22,
-      paddingTop: 58,
-      paddingBottom: 30,
+
+      paddingHorizontal: 24,
+      paddingTop: 55,
+      paddingBottom: 40,
+    },
+
+    topRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
 
     backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 42,
+      height: 42,
+
+      borderRadius: 21,
+
       backgroundColor:
         COLORS.white,
+
+      justifyContent:
+        'center',
+
       alignItems:
         'center',
-      justifyContent:
-        'center',
-    },
 
-    smallHeading: {
-      position:
-        'absolute',
-      top: 68,
-      left: 76,
-      color:
-        COLORS.text,
-      fontWeight: '700',
-    },
-
-    headingContainer: {
-      marginTop: 68,
-      marginBottom: 24,
-    },
-
-    title: {
-      fontSize: 28,
-      fontWeight: '800',
-      color:
-        COLORS.text,
-    },
-
-    subtitle: {
-      marginTop: 9,
-      maxWidth: 280,
-      fontSize: 14,
-      lineHeight: 20,
-      color:
-        COLORS.textSecondary,
-    },
-
-    grid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent:
-        'space-between',
-      gap: 12,
-    },
-
-    card: {
-      width: '48%',
-      minHeight: 155,
-      padding: 15,
-      backgroundColor:
-        COLORS.white,
-      borderRadius: 12,
       borderWidth: 1,
+
       borderColor:
         COLORS.border,
     },
 
+    backButtonPressed: {
+      backgroundColor:
+        COLORS.primaryLight,
+    },
+
+    smallHeading: {
+      marginLeft: 14,
+
+      color:
+        COLORS.text,
+
+      fontSize: 15,
+
+      fontWeight: '800',
+    },
+
+    headingContainer: {
+      marginTop: 66,
+      marginBottom: 26,
+    },
+
+    title: {
+      color:
+        COLORS.text,
+
+      fontSize: 30,
+
+      fontWeight: '900',
+
+      letterSpacing: -0.5,
+    },
+
+    subtitle: {
+      marginTop: 9,
+
+      maxWidth: 290,
+
+      color:
+        COLORS.textSecondary,
+
+      fontSize: 14,
+
+      lineHeight: 21,
+    },
+
+    grid: {
+      flexDirection: 'row',
+
+      flexWrap: 'wrap',
+
+      justifyContent:
+        'space-between',
+
+      rowGap: 14,
+    },
+
+    card: {
+      width: '48%',
+
+      minHeight: 172,
+
+      padding: 16,
+
+      borderRadius: 15,
+
+      backgroundColor:
+        COLORS.white,
+
+      borderWidth: 1.5,
+
+      borderColor:
+        COLORS.border,
+
+      ...Platform.select({
+        web: {
+          cursor: 'pointer',
+
+          transitionDuration:
+            '180ms',
+
+          transitionProperty:
+            'border-color, background-color, transform, box-shadow',
+        },
+      }),
+    },
+
+    cardActive: {
+      borderColor:
+        COLORS.primary,
+
+      backgroundColor:
+        '#FFF9F9',
+
+      shadowColor:
+        COLORS.primaryDark,
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 10,
+
+      shadowOffset: {
+        width: 0,
+        height: 5,
+      },
+
+      elevation: 4,
+
+      ...Platform.select({
+        web: {
+          transform: [
+            {
+              translateY: -3,
+            },
+          ],
+        },
+      }),
+    },
+
+    cardPressed: {
+      opacity: 0.9,
+
+      transform: [
+        {
+          scale: 0.98,
+        },
+      ],
+    },
+
     iconCircle: {
-      width: 39,
-      height: 39,
-      borderRadius: 20,
+      width: 42,
+      height: 42,
+
+      borderRadius: 21,
+
       backgroundColor:
         '#F5F5F5',
+
       justifyContent:
         'center',
+
       alignItems:
         'center',
-      marginBottom: 15,
+
+      marginBottom: 17,
+    },
+
+    iconCircleActive: {
+      backgroundColor:
+        COLORS.primaryLight,
     },
 
     cardTitle: {
-      fontSize: 15,
-      fontWeight: '700',
       color:
         COLORS.text,
+
+      fontSize: 16,
+
+      fontWeight: '800',
+
+      lineHeight: 20,
+
+      paddingRight: 8,
+    },
+
+    cardTitleActive: {
+      color:
+        COLORS.primaryDark,
     },
 
     cardDescription: {
-      marginTop: 5,
-      fontSize: 12,
-      lineHeight: 17,
+      marginTop: 6,
+
       color:
         COLORS.textSecondary,
+
+      fontSize: 12,
+
+      lineHeight: 17,
+    },
+
+    adminInfo: {
+      marginTop: 30,
+
+      flexDirection: 'row',
+
+      alignItems:
+        'center',
+
+      paddingHorizontal: 14,
+
+      paddingVertical: 12,
+
+      borderRadius: 12,
+
+      backgroundColor:
+        'rgba(255, 255, 255, 0.60)',
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.border,
     },
 
     adminNote: {
-      marginTop: 24,
-      textAlign:
-        'center',
+      flex: 1,
+
+      marginLeft: 8,
+
       color:
         COLORS.textSecondary,
-      fontSize: 12,
-      lineHeight: 18,
+
+      fontSize: 11,
+
+      lineHeight: 17,
+
+      textAlign: 'center',
     },
   });

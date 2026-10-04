@@ -51,8 +51,7 @@ type Props =
   >;
 
 function getRoleTitle(
-  role:
-    RegistrationRole,
+  role: RegistrationRole,
 ) {
   switch (role) {
     case 'donor':
@@ -75,89 +74,89 @@ export default function RegisterScreen({
 }: Props) {
   const {
     role,
-    mode = 'email',
   } = route.params;
 
   const {
     register,
-    completeGoogleProfile,
-    user,
   } = useAuth();
 
   const [
     fullName,
     setFullName,
-  ] = useState(
-    mode === 'google'
-      ? user?.displayName ?? ''
-      : '',
-  );
+  ] = useState('');
 
   const [
     email,
     setEmail,
-  ] = useState(
-    mode === 'google'
-      ? user?.email ?? ''
-      : '',
-  );
+  ] = useState('');
 
   const [
     phone,
     setPhone,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     password,
     setPassword,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     confirmPassword,
     setConfirmPassword,
-  ] =
-    useState('');
+  ] = useState('');
 
   const [
     showPassword,
     setShowPassword,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     acceptedTerms,
     setAcceptedTerms,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     loading,
     setLoading,
-  ] =
-    useState(false);
+  ] = useState(false);
 
   const [
     healthcareType,
     setHealthcareType,
-  ] =
-    useState<
-      HealthcareType
-      | undefined
-    >(
-      role ===
-        'healthcare'
-        ? 'doctor'
-        : undefined,
+  ] = useState<
+    HealthcareType | undefined
+  >(
+    role === 'healthcare'
+      ? 'doctor'
+      : undefined,
+  );
+
+  function showMessage(
+    title: string,
+    message: string,
+  ) {
+    if (
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined'
+    ) {
+      window.alert(
+        `${title}\n\n${message}`,
+      );
+
+      return;
+    }
+
+    Alert.alert(
+      title,
+      message,
     );
+  }
 
   async function handleRegister() {
     if (
-      fullName.trim()
-        .length < 2
+      fullName.trim().length < 2
     ) {
-      Alert.alert(
+      showMessage(
         'Invalid name',
         'Please enter your full name.',
       );
@@ -166,11 +165,9 @@ export default function RegisterScreen({
     }
 
     if (
-      !email.includes(
-        '@',
-      )
+      !email.includes('@')
     ) {
-      Alert.alert(
+      showMessage(
         'Invalid email',
         'Please enter a valid email address.',
       );
@@ -179,10 +176,9 @@ export default function RegisterScreen({
     }
 
     if (
-      phone.trim()
-        .length < 9
+      phone.trim().length < 9
     ) {
-      Alert.alert(
+      showMessage(
         'Invalid phone number',
         'Please enter a valid phone number.',
       );
@@ -190,30 +186,33 @@ export default function RegisterScreen({
       return;
     }
 
-    if (mode === 'email') {
-      if (password.length < 6) {
-        Alert.alert(
-          'Weak password',
-          'Password must contain at least 6 characters.',
-        );
-        return;
-      }
+    if (
+      password.length < 6
+    ) {
+      showMessage(
+        'Weak password',
+        'Password must contain at least 6 characters.',
+      );
 
-      if (password !== confirmPassword) {
-        Alert.alert(
-          'Password mismatch',
-          'Password and confirm password must match.',
-        );
-        return;
-      }
+      return;
     }
 
     if (
-      role ===
-        'healthcare' &&
+      password !== confirmPassword
+    ) {
+      showMessage(
+        'Password mismatch',
+        'Password and confirm password must match.',
+      );
+
+      return;
+    }
+
+    if (
+      role === 'healthcare' &&
       !healthcareType
     ) {
-      Alert.alert(
+      showMessage(
         'Select staff type',
         'Please select Doctor or Nurse.',
       );
@@ -221,10 +220,8 @@ export default function RegisterScreen({
       return;
     }
 
-    if (
-      !acceptedTerms
-    ) {
-      Alert.alert(
+    if (!acceptedTerms) {
+      showMessage(
         'Terms required',
         'Please accept the Terms of Service and Privacy Policy.',
       );
@@ -235,25 +232,26 @@ export default function RegisterScreen({
     try {
       setLoading(true);
 
-      if (mode === 'google') {
-        await completeGoogleProfile({
-          fullName: fullName.trim(),
-          phone: phone.trim(),
-          role,
-          healthcareType,
-        });
-      } else {
-        await register({
-          fullName: fullName.trim(),
-          email: email.trim().toLowerCase(),
-          phone: phone.trim(),
-          password,
-          role,
-          healthcareType,
-        });
-      }
+      await register({
+        fullName:
+          fullName.trim(),
+
+        email:
+          email
+            .trim()
+            .toLowerCase(),
+
+        phone:
+          phone.trim(),
+
+        password,
+
+        role,
+
+        healthcareType,
+      });
     } catch (error) {
-      Alert.alert(
+      showMessage(
         'Registration failed',
         getAuthErrorMessage(
           error,
@@ -266,12 +264,9 @@ export default function RegisterScreen({
 
   return (
     <KeyboardAvoidingView
-      style={
-        styles.flex
-      }
+      style={styles.flex}
       behavior={
-        Platform.OS ===
-        'ios'
+        Platform.OS === 'ios'
           ? 'padding'
           : undefined
       }
@@ -281,48 +276,33 @@ export default function RegisterScreen({
           styles.container
         }
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View
-          style={
-            styles.topRow
-          }
-        >
+        <View style={styles.topRow}>
           <Pressable
-            style={
-              styles.backButton
-            }
+            style={styles.backButton}
             onPress={() =>
               navigation.goBack()
             }
           >
             <Ionicons
               name="chevron-back"
-              size={22}
-              color={
-                COLORS.text
-              }
+              size={23}
+              color={COLORS.text}
             />
           </Pressable>
 
           <View>
             <Text
-              style={
-                styles.heading
-              }
+              style={styles.heading}
             >
               Create Account
             </Text>
 
             <Text
-              style={
-                styles.roleText
-              }
+              style={styles.roleText}
             >
-              {
-                getRoleTitle(
-                  role,
-                )
-              }
+              {getRoleTitle(role)}
             </Text>
           </View>
         </View>
@@ -331,9 +311,7 @@ export default function RegisterScreen({
           label="Full Name"
           icon="person-outline"
           placeholder="Full Name"
-          value={
-            fullName
-          }
+          value={fullName}
           onChangeText={
             setFullName
           }
@@ -346,7 +324,6 @@ export default function RegisterScreen({
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
-          editable={mode !== 'google'}
           onChangeText={
             setEmail
           }
@@ -363,120 +340,101 @@ export default function RegisterScreen({
           }
         />
 
-        {role ===
-        'healthcare' ? (
+        {role === 'healthcare' ? (
           <View
-            style={
-              styles.staffSection
-            }
+            style={styles.staffSection}
           >
             <Text
-              style={
-                styles.staffLabel
-              }
+              style={styles.staffLabel}
             >
-              Healthcare
-              Staff Type
+              Healthcare Staff Type
             </Text>
 
             <View
-              style={
-                styles.staffRow
-              }
+              style={styles.staffRow}
             >
               {(
                 [
                   'doctor',
                   'nurse',
                 ] as HealthcareType[]
-              ).map(
-                item => (
-                  <Pressable
-                    key={
-                      item
-                    }
+              ).map(item => (
+                <Pressable
+                  key={item}
+                  style={[
+                    styles.staffButton,
+
+                    healthcareType ===
+                      item &&
+                      styles.staffButtonSelected,
+                  ]}
+                  onPress={() =>
+                    setHealthcareType(
+                      item,
+                    )
+                  }
+                >
+                  <Text
                     style={[
-                      styles.staffButton,
+                      styles.staffButtonText,
 
                       healthcareType ===
                         item &&
-                        styles.staffButtonSelected,
+                        styles.staffButtonTextSelected,
                     ]}
-                    onPress={() =>
-                      setHealthcareType(
-                        item,
-                      )
-                    }
                   >
-                    <Text
-                      style={[
-                        styles.staffButtonText,
-
-                        healthcareType ===
-                          item &&
-                          styles.staffButtonTextSelected,
-                      ]}
-                    >
-                      {item ===
-                      'doctor'
-                        ? 'Doctor'
-                        : 'Nurse'}
-                    </Text>
-                  </Pressable>
-                ),
-              )}
+                    {item === 'doctor'
+                      ? 'Doctor'
+                      : 'Nurse'}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </View>
         ) : null}
 
-        {mode === 'email' ? (
-          <>
-            <AuthInput
-              label="Password"
-              icon="lock-closed-outline"
-              placeholder="Password"
-              secureTextEntry={
-                !showPassword
-              }
-              value={password}
-              onChangeText={
-                setPassword
-              }
-              rightIcon={
-                showPassword
-                  ? 'eye-off-outline'
-                  : 'eye-outline'
-              }
-              onRightPress={() =>
-                setShowPassword(
-                  previous =>
-                        !previous,
-                )
-              }
-            />
-
-            <AuthInput
-              label="Confirm Password"
-              icon="lock-closed-outline"
-              placeholder="Confirm Password"
-              secureTextEntry={
-                !showPassword
-              }
-              value={
-                confirmPassword
-              }
-              onChangeText={
-                setConfirmPassword
-              }
-            />
-
-          </>
-        ) : null}
-
-        <Pressable
-          style={
-            styles.termsRow
+        <AuthInput
+          label="Password"
+          icon="lock-closed-outline"
+          placeholder="Password"
+          secureTextEntry={
+            !showPassword
           }
+          value={password}
+          onChangeText={
+            setPassword
+          }
+          rightIcon={
+            showPassword
+              ? 'eye-off-outline'
+              : 'eye-outline'
+          }
+          onRightPress={() =>
+            setShowPassword(
+              previous =>
+                !previous,
+            )
+          }
+        />
+
+        <AuthInput
+          label="Confirm Password"
+          icon="lock-closed-outline"
+          placeholder="Confirm Password"
+          secureTextEntry={
+            !showPassword
+          }
+          value={
+            confirmPassword
+          }
+          onChangeText={
+            setConfirmPassword
+          }
+        />
+
+        {/* Terms */}
+        <Pressable
+          style={styles.termsRow}
           onPress={() =>
             setAcceptedTerms(
               previous =>
@@ -495,7 +453,7 @@ export default function RegisterScreen({
             {acceptedTerms ? (
               <Ionicons
                 name="checkmark"
-                size={14}
+                size={16}
                 color={
                   COLORS.white
                 }
@@ -504,14 +462,27 @@ export default function RegisterScreen({
           </View>
 
           <Text
-            style={
-              styles.termsText
-            }
+            style={styles.termsText}
           >
-            I agree to
-            the Terms of
-            Service &
-            Privacy Policy
+            I agree to the{' '}
+
+            <Text
+              style={
+                styles.termsLink
+              }
+            >
+              Terms of Service
+            </Text>
+
+            {' & '}
+
+            <Text
+              style={
+                styles.termsLink
+              }
+            >
+              Privacy Policy
+            </Text>
           </Text>
         </Pressable>
 
@@ -522,9 +493,7 @@ export default function RegisterScreen({
             loading &&
               styles.disabled,
           ]}
-          disabled={
-            loading
-          }
+          disabled={loading}
           onPress={
             handleRegister
           }
@@ -536,24 +505,17 @@ export default function RegisterScreen({
           >
             {loading
               ? 'Creating Account...'
-              : mode === 'google'
-                ? 'Complete Profile'
-                : 'Register'}
+              : 'Register'}
           </Text>
         </Pressable>
 
         <View
-          style={
-            styles.loginRow
-          }
+          style={styles.loginRow}
         >
           <Text
-            style={
-              styles.loginText
-            }
+            style={styles.loginText}
           >
-            Already have
-            an account?{' '}
+            Already have an account?{' '}
           </Text>
 
           <Pressable
@@ -564,9 +526,7 @@ export default function RegisterScreen({
             }
           >
             <Text
-              style={
-                styles.loginLink
-              }
+              style={styles.loginLink}
             >
               Login
             </Text>
@@ -581,52 +541,64 @@ const styles =
   StyleSheet.create({
     flex: {
       flex: 1,
+
       backgroundColor:
         COLORS.softBackground,
     },
 
     container: {
       flexGrow: 1,
+
       paddingHorizontal: 24,
-      paddingTop: 55,
-      paddingBottom: 40,
+      paddingTop: 48,
+      paddingBottom: 35,
+
       backgroundColor:
         COLORS.softBackground,
     },
 
     topRow: {
       flexDirection: 'row',
-      alignItems:
-        'center',
-      marginBottom: 36,
+      alignItems: 'center',
+
+      marginBottom: 34,
     },
 
     backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 42,
+      height: 42,
+
+      borderRadius: 21,
+
       backgroundColor:
         COLORS.white,
-      alignItems:
-        'center',
-      justifyContent:
-        'center',
+
+      alignItems: 'center',
+      justifyContent: 'center',
+
       marginRight: 14,
+
+      borderWidth: 1,
+      borderColor:
+        COLORS.border,
     },
 
     heading: {
-      fontSize: 22,
-      fontWeight: '800',
+      fontSize: 23,
+      fontWeight: '900',
+
       color:
         COLORS.text,
     },
 
     roleText: {
       marginTop: 3,
+
       color:
         COLORS.primary,
+
       fontSize: 12,
-      fontWeight: '600',
+      fontWeight: '700',
     },
 
     staffSection: {
@@ -635,10 +607,12 @@ const styles =
 
     staffLabel: {
       marginBottom: 8,
+
       color:
         COLORS.textSecondary,
+
       fontSize: 13,
-      fontWeight: '500',
+      fontWeight: '600',
     },
 
     staffRow: {
@@ -648,15 +622,22 @@ const styles =
 
     staffButton: {
       flex: 1,
-      height: 45,
-      borderRadius: 9,
-      borderWidth: 1,
+
+      height: 46,
+
+      borderRadius: 10,
+
+      borderWidth: 1.5,
+
       borderColor:
         COLORS.border,
+
       backgroundColor:
         COLORS.white,
+
       justifyContent:
         'center',
+
       alignItems:
         'center',
     },
@@ -664,14 +645,16 @@ const styles =
     staffButtonSelected: {
       borderColor:
         COLORS.primary,
+
       backgroundColor:
-        '#FFF1F1',
+        COLORS.primaryLight,
     },
 
     staffButtonText: {
       color:
         COLORS.textSecondary,
-      fontWeight: '600',
+
+      fontWeight: '700',
     },
 
     staffButtonTextSelected: {
@@ -681,21 +664,31 @@ const styles =
 
     termsRow: {
       flexDirection: 'row',
-      alignItems:
-        'center',
-      marginVertical: 10,
+      alignItems: 'center',
+
+      marginTop: 7,
+      marginBottom: 18,
+
+      minHeight: 36,
     },
 
     checkbox: {
-      width: 18,
-      height: 18,
-      borderRadius: 4,
-      borderWidth: 1.5,
+      width: 22,
+      height: 22,
+
+      borderRadius: 6,
+
+      borderWidth: 2,
+
       borderColor:
-        COLORS.border,
-      marginRight: 9,
-      alignItems:
-        'center',
+        COLORS.primary,
+
+      backgroundColor:
+        COLORS.white,
+
+      marginRight: 10,
+
+      alignItems: 'center',
       justifyContent:
         'center',
     },
@@ -703,27 +696,53 @@ const styles =
     checkboxSelected: {
       backgroundColor:
         COLORS.primary,
+
       borderColor:
         COLORS.primary,
     },
 
     termsText: {
       flex: 1,
+
       color:
         COLORS.textSecondary,
+
       fontSize: 12,
+      lineHeight: 18,
+    },
+
+    termsLink: {
+      color:
+        COLORS.primary,
+
+      fontWeight: '700',
     },
 
     registerButton: {
-      height: 52,
-      marginTop: 12,
-      borderRadius: 9,
+      height: 54,
+
+      borderRadius: 11,
+
       backgroundColor:
         COLORS.primary,
-      alignItems:
-        'center',
+
+      alignItems: 'center',
       justifyContent:
         'center',
+
+      shadowColor:
+        COLORS.primaryDark,
+
+      shadowOpacity: 0.18,
+
+      shadowRadius: 8,
+
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+
+      elevation: 3,
     },
 
     disabled: {
@@ -733,13 +752,17 @@ const styles =
     registerButtonText: {
       color:
         COLORS.white,
-      fontWeight: '700',
+
+      fontWeight: '800',
+
       fontSize: 15,
     },
 
     loginRow: {
-      marginTop: 32,
+      marginTop: 30,
+
       flexDirection: 'row',
+
       justifyContent:
         'center',
     },
@@ -747,13 +770,16 @@ const styles =
     loginText: {
       color:
         COLORS.textSecondary,
+
       fontSize: 13,
     },
 
     loginLink: {
       color:
         COLORS.primary,
-      fontWeight: '700',
+
+      fontWeight: '800',
+
       fontSize: 13,
     },
   });

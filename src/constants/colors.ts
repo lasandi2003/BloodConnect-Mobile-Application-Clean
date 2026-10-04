@@ -1,21 +1,31 @@
 export const COLORS = {
-  primary: '#D2232A',
-  primaryDark: '#9D0B17',
-  primaryLight: '#F7DDDD',
+  // Brand
+  primary: '#B2081B',       // main BloodConnect red
+  primaryDark: '#8E0615',   // darker red
+  primaryDeep: '#6F0410',   // deepest red
+  primaryLight: '#F7D9DE',  // soft light red
 
-  background: '#FFFFFF',
-  softBackground: '#F8E4E4',
+  // Backgrounds
+  background: '#FFF8F8',
+  softBackground: '#FCEAEC',
+  surface: '#FFFFFF',
+  inputBackground: '#F8F5F5',
 
-  text: '#1C1C1C',
-  textSecondary: '#777777',
+  // Text
+  text: '#1F1F1F',
+  textSecondary: '#6F6F6F',
+  textMuted: '#9A9A9A',
 
-  border: '#E5E5E5',
-  inputBackground: '#F5F5F5',
+  // UI
+  border: '#E8DDDF',
+  divider: '#F0E5E7',
 
+  // Common
   white: '#FFFFFF',
   black: '#000000',
 
-  success: '#2E7D32',
-  warning: '#F59E0B',
-  danger: '#D2232A',
+  // Status
+  success: '#2E8B57',
+  warning: '#E7A21A',
+  danger: '#B2081B',
 };

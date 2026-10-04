@@ -83,12 +83,12 @@ export default function RoleDashboard({
       await logout();
 
       /*
-       * RootNavigator automatically detects:
-       *
+       * RootNavigator detects:
        * user = null
        * profile = null
        *
-       * and returns the user to Login.
+       * and automatically returns
+       * the user to Login.
        */
     } catch (error) {
       console.error(
@@ -117,24 +117,6 @@ export default function RoleDashboard({
         <View
           style={styles.header}
         >
-          {/* Back button */}
-          <Pressable
-            style={
-              styles.backButton
-            }
-            onPress={
-              openLogoutModal
-            }
-          >
-            <Ionicons
-              name="chevron-back"
-              size={23}
-              color={
-                COLORS.text
-              }
-            />
-          </Pressable>
-
           {/* User information */}
           <View
             style={
@@ -237,9 +219,7 @@ export default function RoleDashboard({
                     styles.cardDescription
                   }
                 >
-                  {
-                    item.description
-                  }
+                  {item.description}
                 </Text>
               </View>
 
@@ -334,6 +314,7 @@ export default function RoleDashboard({
               <Pressable
                 style={[
                   styles.signOutButton,
+
                   loggingOut &&
                     styles.disabledButton,
                 ]}
@@ -367,41 +348,26 @@ const styles =
     safe: {
       flex: 1,
       backgroundColor:
-        '#FAFAFA',
+        COLORS.background,
     },
 
     container: {
       paddingHorizontal: 18,
-      paddingTop: 8,
+      paddingTop: 12,
       paddingBottom: 24,
     },
 
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 18,
-    },
-
-    backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-
-      backgroundColor:
-        COLORS.white,
-
-      alignItems: 'center',
       justifyContent:
-        'center',
-
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
+        'space-between',
+      marginBottom: 18,
     },
 
     headerText: {
       flex: 1,
-      marginLeft: 12,
+      paddingRight: 12,
     },
 
     welcome: {
@@ -419,12 +385,12 @@ const styles =
     },
 
     logoutButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
 
       backgroundColor:
-        '#FFF0F0',
+        COLORS.primaryLight,
 
       alignItems: 'center',
       justifyContent:
@@ -439,6 +405,20 @@ const styles =
         COLORS.primary,
 
       marginBottom: 18,
+
+      shadowColor:
+        COLORS.primaryDark,
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 8,
+
+      shadowOffset: {
+        width: 0,
+        height: 4,
+      },
+
+      elevation: 3,
     },
 
     title: {
@@ -454,8 +434,7 @@ const styles =
       fontSize: 13,
       lineHeight: 19,
 
-      color:
-        '#FFEAEA',
+      color: '#FFEAEA',
     },
 
     grid: {
@@ -486,7 +465,7 @@ const styles =
       borderRadius: 22,
 
       backgroundColor:
-        '#FFF0F0',
+        COLORS.primaryLight,
 
       justifyContent:
         'center',
@@ -556,7 +535,7 @@ const styles =
       borderRadius: 29,
 
       backgroundColor:
-        '#FFF0F0',
+        COLORS.primaryLight,
 
       justifyContent:
         'center',
