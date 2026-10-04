@@ -75,25 +75,32 @@ export default function RegisterScreen({
 }: Props) {
   const {
     role,
-  } =
-    route.params;
+    mode = 'email',
+  } = route.params;
 
   const {
     register,
-  } =
-    useAuth();
+    completeGoogleProfile,
+    user,
+  } = useAuth();
 
   const [
     fullName,
     setFullName,
-  ] =
-    useState('');
+  ] = useState(
+    mode === 'google'
+      ? user?.displayName ?? ''
+      : '',
+  );
 
   const [
     email,
     setEmail,
-  ] =
-    useState('');
+  ] = useState(
+    mode === 'google'
+      ? user?.email ?? ''
+      : '',
+  );
 
   const [
     phone,
@@ -183,28 +190,22 @@ export default function RegisterScreen({
       return;
     }
 
-    if (
-      password.length <
-      6
-    ) {
-      Alert.alert(
-        'Weak password',
-        'Password must contain at least 6 characters.',
-      );
+    if (mode === 'email') {
+      if (password.length < 6) {
+        Alert.alert(
+          'Weak password',
+          'Password must contain at least 6 characters.',
+        );
+        return;
+      }
 
-      return;
-    }
-
-    if (
-      password !==
-      confirmPassword
-    ) {
-      Alert.alert(
-        'Password mismatch',
-        'Password and confirm password must match.',
-      );
-
-      return;
+      if (password !== confirmPassword) {
+        Alert.alert(
+          'Password mismatch',
+          'Password and confirm password must match.',
+        );
+        return;
+      }
     }
 
     if (
@@ -234,24 +235,23 @@ export default function RegisterScreen({
     try {
       setLoading(true);
 
-      await register({
-        fullName:
-          fullName.trim(),
-
-        email:
-          email
-            .trim()
-            .toLowerCase(),
-
-        phone:
-          phone.trim(),
-
-        password,
-
-        role,
-
-        healthcareType,
-      });
+      if (mode === 'google') {
+        await completeGoogleProfile({
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          role,
+          healthcareType,
+        });
+      } else {
+        await register({
+          fullName: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          password,
+          role,
+          healthcareType,
+        });
+      }
     } catch (error) {
       Alert.alert(
         'Registration failed',
@@ -346,6 +346,7 @@ export default function RegisterScreen({
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
+          editable={mode !== 'google'}
           onChangeText={
             setEmail
           }
@@ -428,44 +429,49 @@ export default function RegisterScreen({
           </View>
         ) : null}
 
-        <AuthInput
-          label="Password"
-          icon="lock-closed-outline"
-          placeholder="Password"
-          secureTextEntry={
-            !showPassword
-          }
-          value={password}
-          onChangeText={
-            setPassword
-          }
-          rightIcon={
-            showPassword
-              ? 'eye-off-outline'
-              : 'eye-outline'
-          }
-          onRightPress={() =>
-            setShowPassword(
-              previous =>
-                !previous,
-            )
-          }
-        />
+        {mode === 'email' ? (
+          <>
+            <AuthInput
+              label="Password"
+              icon="lock-closed-outline"
+              placeholder="Password"
+              secureTextEntry={
+                !showPassword
+              }
+              value={password}
+              onChangeText={
+                setPassword
+              }
+              rightIcon={
+                showPassword
+                  ? 'eye-off-outline'
+                  : 'eye-outline'
+              }
+              onRightPress={() =>
+                setShowPassword(
+                  previous =>
+                        !previous,
+                )
+              }
+            />
 
-        <AuthInput
-          label="Confirm Password"
-          icon="lock-closed-outline"
-          placeholder="Confirm Password"
-          secureTextEntry={
-            !showPassword
-          }
-          value={
-            confirmPassword
-          }
-          onChangeText={
-            setConfirmPassword
-          }
-        />
+            <AuthInput
+              label="Confirm Password"
+              icon="lock-closed-outline"
+              placeholder="Confirm Password"
+              secureTextEntry={
+                !showPassword
+              }
+              value={
+                confirmPassword
+              }
+              onChangeText={
+                setConfirmPassword
+              }
+            />
+
+          </>
+        ) : null}
 
         <Pressable
           style={
@@ -530,7 +536,9 @@ export default function RegisterScreen({
           >
             {loading
               ? 'Creating Account...'
-              : 'Register'}
+              : mode === 'google'
+                ? 'Complete Profile'
+                : 'Register'}
           </Text>
         </Pressable>
 

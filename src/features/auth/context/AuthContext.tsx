@@ -16,12 +16,15 @@ import {
 
 import type {
   RegisterInput,
+  SocialProfileInput,
   UserProfile,
 } from '../../../types/auth';
 
 import {
+  completeSocialProfile,
   getUserProfile,
   loginAccount,
+  loginWithGoogleWeb,
   logoutAccount,
   registerAccount,
   resetAccountPassword,
@@ -29,131 +32,92 @@ import {
 
 interface AuthContextValue {
   user: User | null;
-
-  profile:
-    | UserProfile
-    | null;
-
+  profile: UserProfile | null;
   initializing: boolean;
 
-  login:
-    (
-      email: string,
-      password: string,
-    ) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+  ) => Promise<void>;
 
-  register:
-    (
-      input: RegisterInput,
-    ) => Promise<void>;
+  loginWithGoogle: () => Promise<
+    'existing' | 'needs-profile'
+  >;
 
-  logout:
-    () => Promise<void>;
+  register: (
+    input: RegisterInput,
+  ) => Promise<void>;
 
-  resetPassword:
-    (
-      email: string,
-    ) => Promise<void>;
+  completeGoogleProfile: (
+    input: SocialProfileInput,
+  ) => Promise<void>;
+
+  logout: () => Promise<void>;
+
+  resetPassword: (
+    email: string,
+  ) => Promise<void>;
 }
 
-const AuthContext =
-  createContext<
-    AuthContextValue | undefined
-  >(undefined);
+const AuthContext = createContext<
+  AuthContextValue | undefined
+>(undefined);
 
 interface AuthProviderProps {
-  children:
-    React.ReactNode;
+  children: React.ReactNode;
 }
 
 export function AuthProvider({
   children,
 }: AuthProviderProps) {
-  const [
-    user,
-    setUser,
-  ] =
-    useState<User | null>(
-      null,
-    );
+  const [user, setUser] =
+    useState<User | null>(null);
 
-  const [
-    profile,
-    setProfile,
-  ] =
-    useState<
-      UserProfile | null
-    >(null);
+  const [profile, setProfile] =
+    useState<UserProfile | null>(null);
 
-  const [
-    initializing,
-    setInitializing,
-  ] =
+  const [initializing, setInitializing] =
     useState(true);
 
   useEffect(() => {
-    const unsubscribe =
-      onAuthStateChanged(
-        auth,
-        async (
-          firebaseUser,
-        ) => {
-          setUser(
-            firebaseUser,
-          );
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async firebaseUser => {
+        setUser(firebaseUser);
+
+        if (!firebaseUser) {
+          setProfile(null);
+          setInitializing(false);
+          return;
+        }
+
+        try {
+          const loadedProfile =
+            await getUserProfile(
+              firebaseUser.uid,
+            );
 
           if (
-            !firebaseUser
+            loadedProfile?.status ===
+            'suspended'
           ) {
-            setProfile(
-              null,
-            );
-
-            setInitializing(
-              false,
-            );
-
-            return;
+            await logoutAccount();
+            setUser(null);
+            setProfile(null);
+          } else {
+            setProfile(loadedProfile);
           }
-
-          try {
-            const loadedProfile =
-              await getUserProfile(
-                firebaseUser.uid,
-              );
-
-            if (
-              loadedProfile
-                ?.status ===
-              'suspended'
-            ) {
-              await logoutAccount();
-
-              setUser(null);
-              setProfile(null);
-            } else {
-              setProfile(
-                loadedProfile,
-              );
-            }
-          } catch (
-            error
-          ) {
-            console.error(
-              'Profile loading error:',
-              error,
-            );
-
-            setProfile(
-              null,
-            );
-          } finally {
-            setInitializing(
-              false,
-            );
-          }
-        },
-      );
+        } catch (error) {
+          console.error(
+            'Profile loading error:',
+            error,
+          );
+          setProfile(null);
+        } finally {
+          setInitializing(false);
+        }
+      },
+    );
 
     return unsubscribe;
   }, []);
@@ -162,41 +126,60 @@ export function AuthProvider({
     email: string,
     password: string,
   ) {
+    const loadedProfile = await loginAccount(
+      email,
+      password,
+    );
+
+    setUser(auth.currentUser);
+    setProfile(loadedProfile);
+  }
+
+  async function loginWithGoogle() {
     const loadedProfile =
-      await loginAccount(
-        email,
-        password,
-      );
+      await loginWithGoogleWeb();
 
-    setUser(
-      auth.currentUser,
-    );
+    setUser(auth.currentUser);
+    setProfile(loadedProfile);
 
-    setProfile(
-      loadedProfile,
-    );
+    return loadedProfile
+      ? 'existing'
+      : 'needs-profile';
   }
 
   async function register(
     input: RegisterInput,
   ) {
     const newProfile =
-      await registerAccount(
+      await registerAccount(input);
+
+    setUser(auth.currentUser);
+    setProfile(newProfile);
+  }
+
+  async function completeGoogleProfile(
+    input: SocialProfileInput,
+  ) {
+    const currentUser = auth.currentUser;
+
+    if (!currentUser) {
+      throw new Error(
+        'Google account session was not found. Please sign in again.',
+      );
+    }
+
+    const newProfile =
+      await completeSocialProfile(
+        currentUser,
         input,
       );
 
-    setUser(
-      auth.currentUser,
-    );
-
-    setProfile(
-      newProfile,
-    );
+    setUser(currentUser);
+    setProfile(newProfile);
   }
 
   async function logout() {
     await logoutAccount();
-
     setUser(null);
     setProfile(null);
   }
@@ -204,9 +187,7 @@ export function AuthProvider({
   async function resetPassword(
     email: string,
   ) {
-    await resetAccountPassword(
-      email,
-    );
+    await resetAccountPassword(email);
   }
 
   return (
@@ -216,7 +197,9 @@ export function AuthProvider({
         profile,
         initializing,
         login,
+        loginWithGoogle,
         register,
+        completeGoogleProfile,
         logout,
         resetPassword,
       }}
@@ -227,10 +210,7 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-  const context =
-    useContext(
-      AuthContext,
-    );
+  const context = useContext(AuthContext);
 
   if (!context) {
     throw new Error(

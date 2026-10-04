@@ -6,13 +6,22 @@ export type AuthStackParamList = {
   Login: undefined;
 
   RoleSelection:
-    undefined;
+    | {
+        mode?: 'email' | 'google';
+      }
+    | undefined;
 
   Register: {
-    role:
-      RegistrationRole;
+    role: RegistrationRole;
+    mode?: 'email' | 'google';
   };
 
-  ForgotPassword:
-    undefined;
+  ForgotPassword: undefined;
+};
+
+export type RoleTabParamList = {
+  Home: undefined;
+  Activity: undefined;
+  Services: undefined;
+  Profile: undefined;
 };

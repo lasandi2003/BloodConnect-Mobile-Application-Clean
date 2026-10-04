@@ -92,6 +92,7 @@ const roles: RoleOption[] = [
 
 export default function RoleSelectionScreen({
   navigation,
+  route,
 }: Props) {
   function selectRole(
     role:
@@ -101,6 +102,7 @@ export default function RoleSelectionScreen({
       'Register',
       {
         role,
+        mode: route.params?.mode ?? 'email',
       },
     );
   }

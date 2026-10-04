@@ -1,14 +1,15 @@
 import React, {
   type ComponentProps,
+  useState,
 } from 'react';
 
 import {
-  Alert,
+  Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
-  Pressable,
 } from 'react-native';
 
 import {
@@ -27,27 +28,20 @@ import {
   useAuth,
 } from '../features/auth/context/AuthContext';
 
-type IconName =
-  ComponentProps<
-    typeof Ionicons
-  >['name'];
+type IconName = ComponentProps<
+  typeof Ionicons
+>['name'];
 
 export interface DashboardItem {
   title: string;
-
   description: string;
-
-  icon:
-    IconName;
+  icon: IconName;
 }
 
 interface Props {
   title: string;
-
   subtitle: string;
-
-  items:
-    DashboardItem[];
+  items: DashboardItem[];
 }
 
 export default function RoleDashboard({
@@ -58,46 +52,95 @@ export default function RoleDashboard({
   const {
     profile,
     logout,
-  } =
-    useAuth();
+  } = useAuth();
 
-  function handleLogout() {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+  const [
+    logoutModalVisible,
+    setLogoutModalVisible,
+  ] = useState(false);
 
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress:
-            logout,
-        },
-      ],
-    );
+  const [
+    loggingOut,
+    setLoggingOut,
+  ] = useState(false);
+
+  function openLogoutModal() {
+    setLogoutModalVisible(true);
+  }
+
+  function closeLogoutModal() {
+    if (loggingOut) {
+      return;
+    }
+
+    setLogoutModalVisible(false);
+  }
+
+  async function handleLogout() {
+    try {
+      setLoggingOut(true);
+
+      await logout();
+
+      /*
+       * RootNavigator automatically detects:
+       *
+       * user = null
+       * profile = null
+       *
+       * and returns the user to Login.
+       */
+    } catch (error) {
+      console.error(
+        'Logout error:',
+        error,
+      );
+    } finally {
+      setLoggingOut(false);
+      setLogoutModalVisible(false);
+    }
   }
 
   return (
     <SafeAreaView
-      style={
-        styles.safe
-      }
+      style={styles.safe}
     >
       <ScrollView
         contentContainerStyle={
           styles.container
         }
+        showsVerticalScrollIndicator={
+          false
+        }
       >
+        {/* Header */}
         <View
-          style={
-            styles.header
-          }
+          style={styles.header}
         >
-          <View>
+          {/* Back button */}
+          <Pressable
+            style={
+              styles.backButton
+            }
+            onPress={
+              openLogoutModal
+            }
+          >
+            <Ionicons
+              name="chevron-back"
+              size={23}
+              color={
+                COLORS.text
+              }
+            />
+          </Pressable>
+
+          {/* User information */}
+          <View
+            style={
+              styles.headerText
+            }
+          >
             <Text
               style={
                 styles.welcome
@@ -107,27 +150,26 @@ export default function RoleDashboard({
             </Text>
 
             <Text
-              style={
-                styles.name
-              }
+              style={styles.name}
+              numberOfLines={1}
             >
-              {profile
-                ?.fullName ??
+              {profile?.fullName ??
                 'User'}
             </Text>
           </View>
 
+          {/* Logout button */}
           <Pressable
             style={
               styles.logoutButton
             }
             onPress={
-              handleLogout
+              openLogoutModal
             }
           >
             <Ionicons
               name="log-out-outline"
-              size={22}
+              size={21}
               color={
                 COLORS.primary
               }
@@ -135,15 +177,12 @@ export default function RoleDashboard({
           </Pressable>
         </View>
 
+        {/* Hero section */}
         <View
-          style={
-            styles.hero
-          }
+          style={styles.hero}
         >
           <Text
-            style={
-              styles.title
-            }
+            style={styles.title}
           >
             {title}
           </Text>
@@ -157,37 +196,34 @@ export default function RoleDashboard({
           </Text>
         </View>
 
+        {/* Dashboard cards */}
         <View
-          style={
-            styles.grid
-          }
+          style={styles.grid}
         >
-          {items.map(
-            item => (
+          {items.map(item => (
+            <View
+              key={item.title}
+              style={styles.card}
+            >
               <View
-                key={
-                  item.title
-                }
                 style={
-                  styles.card
+                  styles.iconCircle
                 }
               >
-                <View
-                  style={
-                    styles.iconCircle
+                <Ionicons
+                  name={item.icon}
+                  size={24}
+                  color={
+                    COLORS.primary
                   }
-                >
-                  <Ionicons
-                    name={
-                      item.icon
-                    }
-                    size={25}
-                    color={
-                      COLORS.primary
-                    }
-                  />
-                </View>
+                />
+              </View>
 
+              <View
+                style={
+                  styles.cardText
+                }
+              >
                 <Text
                   style={
                     styles.cardTitle
@@ -206,10 +242,122 @@ export default function RoleDashboard({
                   }
                 </Text>
               </View>
-            ),
-          )}
+
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color="#B9B9B9"
+              />
+            </View>
+          ))}
         </View>
       </ScrollView>
+
+      {/* Logout confirmation modal */}
+      <Modal
+        visible={
+          logoutModalVisible
+        }
+        transparent
+        animationType="fade"
+        onRequestClose={
+          closeLogoutModal
+        }
+      >
+        <View
+          style={
+            styles.modalOverlay
+          }
+        >
+          <View
+            style={
+              styles.modalCard
+            }
+          >
+            <View
+              style={
+                styles.modalIcon
+              }
+            >
+              <Ionicons
+                name="log-out-outline"
+                size={30}
+                color={
+                  COLORS.primary
+                }
+              />
+            </View>
+
+            <Text
+              style={
+                styles.modalTitle
+              }
+            >
+              Logout
+            </Text>
+
+            <Text
+              style={
+                styles.modalMessage
+              }
+            >
+              Are you sure you want
+              to sign out of
+              BloodConnect?
+            </Text>
+
+            <View
+              style={
+                styles.modalButtons
+              }
+            >
+              <Pressable
+                style={
+                  styles.cancelButton
+                }
+                disabled={
+                  loggingOut
+                }
+                onPress={
+                  closeLogoutModal
+                }
+              >
+                <Text
+                  style={
+                    styles.cancelButtonText
+                  }
+                >
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.signOutButton,
+                  loggingOut &&
+                    styles.disabledButton,
+                ]}
+                disabled={
+                  loggingOut
+                }
+                onPress={
+                  handleLogout
+                }
+              >
+                <Text
+                  style={
+                    styles.signOutButtonText
+                  }
+                >
+                  {loggingOut
+                    ? 'Signing out...'
+                    : 'Sign Out'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -223,55 +371,78 @@ const styles =
     },
 
     container: {
-      padding: 20,
-      paddingBottom: 40,
+      paddingHorizontal: 18,
+      paddingTop: 8,
+      paddingBottom: 24,
     },
 
     header: {
       flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 18,
+    },
+
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+
+      backgroundColor:
+        COLORS.white,
+
+      alignItems: 'center',
       justifyContent:
-        'space-between',
-      alignItems:
         'center',
-      marginBottom: 24,
+
+      borderWidth: 1,
+      borderColor:
+        COLORS.border,
+    },
+
+    headerText: {
+      flex: 1,
+      marginLeft: 12,
     },
 
     welcome: {
-      fontSize: 13,
+      fontSize: 12,
       color:
         COLORS.textSecondary,
     },
 
     name: {
-      marginTop: 3,
-      fontSize: 22,
+      marginTop: 2,
+      fontSize: 19,
       fontWeight: '800',
       color:
         COLORS.text,
     },
 
     logoutButton: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+
       backgroundColor:
-        COLORS.white,
+        '#FFF0F0',
+
+      alignItems: 'center',
       justifyContent:
-        'center',
-      alignItems:
         'center',
     },
 
     hero: {
-      padding: 21,
-      borderRadius: 16,
+      padding: 20,
+      borderRadius: 18,
+
       backgroundColor:
         COLORS.primary,
-      marginBottom: 24,
+
+      marginBottom: 18,
     },
 
     title: {
-      fontSize: 23,
+      fontSize: 22,
       fontWeight: '800',
       color:
         COLORS.white,
@@ -279,51 +450,209 @@ const styles =
 
     subtitle: {
       marginTop: 7,
+
       fontSize: 13,
       lineHeight: 19,
+
       color:
         '#FFEAEA',
     },
 
     grid: {
-      gap: 12,
+      gap: 10,
     },
 
     card: {
-      padding: 18,
+      minHeight: 88,
+
+      padding: 15,
+
       backgroundColor:
         COLORS.white,
+
       borderRadius: 14,
+
       borderWidth: 1,
       borderColor:
         COLORS.border,
+
+      flexDirection: 'row',
+      alignItems: 'center',
     },
 
     iconCircle: {
       width: 44,
       height: 44,
       borderRadius: 22,
+
       backgroundColor:
         '#FFF0F0',
+
       justifyContent:
         'center',
+
       alignItems:
         'center',
-      marginBottom: 12,
+
+      marginRight: 12,
+    },
+
+    cardText: {
+      flex: 1,
     },
 
     cardTitle: {
-      fontSize: 16,
+      fontSize: 15,
       fontWeight: '700',
       color:
         COLORS.text,
     },
 
     cardDescription: {
-      marginTop: 5,
+      marginTop: 4,
+
+      fontSize: 12,
+      lineHeight: 17,
+
       color:
         COLORS.textSecondary,
-      fontSize: 13,
-      lineHeight: 18,
+    },
+
+    modalOverlay: {
+      flex: 1,
+
+      backgroundColor:
+        'rgba(0, 0, 0, 0.45)',
+
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+
+      paddingHorizontal: 25,
+    },
+
+    modalCard: {
+      width: '100%',
+      maxWidth: 360,
+
+      backgroundColor:
+        COLORS.white,
+
+      borderRadius: 20,
+
+      paddingHorizontal: 24,
+      paddingVertical: 28,
+
+      alignItems:
+        'center',
+    },
+
+    modalIcon: {
+      width: 58,
+      height: 58,
+
+      borderRadius: 29,
+
+      backgroundColor:
+        '#FFF0F0',
+
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+
+      marginBottom: 16,
+    },
+
+    modalTitle: {
+      fontSize: 21,
+      fontWeight: '800',
+
+      color:
+        COLORS.text,
+    },
+
+    modalMessage: {
+      marginTop: 8,
+
+      fontSize: 14,
+      lineHeight: 20,
+
+      color:
+        COLORS.textSecondary,
+
+      textAlign:
+        'center',
+    },
+
+    modalButtons: {
+      width: '100%',
+
+      flexDirection: 'row',
+
+      gap: 10,
+
+      marginTop: 24,
+    },
+
+    cancelButton: {
+      flex: 1,
+
+      height: 48,
+
+      borderRadius: 10,
+
+      borderWidth: 1,
+      borderColor:
+        COLORS.border,
+
+      backgroundColor:
+        COLORS.white,
+
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+    },
+
+    cancelButtonText: {
+      fontSize: 14,
+      fontWeight: '700',
+
+      color:
+        COLORS.text,
+    },
+
+    signOutButton: {
+      flex: 1,
+
+      height: 48,
+
+      borderRadius: 10,
+
+      backgroundColor:
+        COLORS.primary,
+
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+    },
+
+    signOutButtonText: {
+      fontSize: 14,
+      fontWeight: '700',
+
+      color:
+        COLORS.white,
+    },
+
+    disabledButton: {
+      opacity: 0.6,
     },
   });

@@ -24,12 +24,10 @@ export interface UserProfile {
   fullName: string;
   email: string;
   phone: string;
-
   role: UserRole;
-
   healthcareType?: HealthcareType;
-
   status: UserStatus;
+  photoURL?: string;
 }
 
 export interface RegisterInput {
@@ -37,8 +35,13 @@ export interface RegisterInput {
   email: string;
   phone: string;
   password: string;
-
   role: RegistrationRole;
+  healthcareType?: HealthcareType;
+}
 
+export interface SocialProfileInput {
+  fullName: string;
+  phone: string;
+  role: RegistrationRole;
   healthcareType?: HealthcareType;
 }

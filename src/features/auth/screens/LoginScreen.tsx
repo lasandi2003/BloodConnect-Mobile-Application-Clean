@@ -42,11 +42,10 @@ import {
 
 import AuthInput from '../components/AuthInput';
 
-type Props =
-  NativeStackScreenProps<
-    AuthStackParamList,
-    'Login'
-  >;
+type Props = NativeStackScreenProps<
+  AuthStackParamList,
+  'Login'
+>;
 
 const REMEMBERED_EMAIL_KEY =
   'bloodconnect_remembered_email';
@@ -56,37 +55,19 @@ export default function LoginScreen({
 }: Props) {
   const {
     login,
-  } =
-    useAuth();
+    loginWithGoogle,
+  } = useAuth();
 
-  const [
-    email,
-    setEmail,
-  ] =
+  const [email, setEmail] = useState('');
+  const [password, setPassword] =
     useState('');
-
-  const [
-    password,
-    setPassword,
-  ] =
-    useState('');
-
-  const [
-    rememberMe,
-    setRememberMe,
-  ] =
+  const [rememberMe, setRememberMe] =
     useState(false);
-
-  const [
-    showPassword,
-    setShowPassword,
-  ] =
+  const [showPassword, setShowPassword] =
     useState(false);
-
-  const [
-    loading,
-    setLoading,
-  ] =
+  const [loading, setLoading] =
+    useState(false);
+  const [googleLoading, setGoogleLoading] =
     useState(false);
 
   useEffect(() => {
@@ -97,13 +78,8 @@ export default function LoginScreen({
         );
 
       if (savedEmail) {
-        setEmail(
-          savedEmail,
-        );
-
-        setRememberMe(
-          true,
-        );
+        setEmail(savedEmail);
+        setRememberMe(true);
       }
     }
 
@@ -111,32 +87,22 @@ export default function LoginScreen({
   }, []);
 
   async function handleLogin() {
-    if (
-      !email.trim() ||
-      !password
-    ) {
+    if (!email.trim() || !password) {
       Alert.alert(
         'Missing information',
         'Please enter your email and password.',
       );
-
       return;
     }
 
     try {
       setLoading(true);
+      await login(email, password);
 
-      await login(
-        email,
-        password,
-      );
-
-      if (
-        rememberMe
-      ) {
+      if (rememberMe) {
         await AsyncStorage.setItem(
           REMEMBERED_EMAIL_KEY,
-          email.trim(),
+          email.trim().toLowerCase(),
         );
       } else {
         await AsyncStorage.removeItem(
@@ -146,81 +112,86 @@ export default function LoginScreen({
     } catch (error) {
       Alert.alert(
         'Login failed',
-        getAuthErrorMessage(
-          error,
-        ),
+        getAuthErrorMessage(error),
       );
     } finally {
       setLoading(false);
     }
   }
 
+  async function handleGoogleLogin() {
+    try {
+      setGoogleLoading(true);
+
+      const result = await loginWithGoogle();
+
+      if (result === 'needs-profile') {
+        navigation.navigate(
+          'RoleSelection',
+          {
+            mode: 'google',
+          },
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Google Sign-In',
+        getAuthErrorMessage(error),
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
   return (
     <KeyboardAvoidingView
-      style={
-        styles.flex
-      }
+      style={styles.flex}
       behavior={
-        Platform.OS ===
-        'ios'
+        Platform.OS === 'ios'
           ? 'padding'
           : undefined
       }
     >
       <ScrollView
-        contentContainerStyle={
-          styles.container
-        }
+        contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View
-          style={
-            styles.header
-          }
-        >
-          <Text
-            style={
-              styles.title
-            }
-          >
+        <View style={styles.brandBadge}>
+          <Ionicons
+            name="water"
+            size={26}
+            color={COLORS.white}
+          />
+        </View>
+
+        <View style={styles.header}>
+          <Text style={styles.title}>
             Welcome Back
           </Text>
 
-          <Text
-            style={
-              styles.subtitle
-            }
-          >
-            Enter your
-            credentials to
-            access your
-            account
+          <Text style={styles.subtitle}>
+            Enter your credentials to access your BloodConnect account.
           </Text>
         </View>
 
         <AuthInput
-          label="Email Address or Phone"
+          label="Email Address"
           icon="mail-outline"
           placeholder="Email"
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
-          onChangeText={
-            setEmail
-          }
+          onChangeText={setEmail}
         />
 
         <AuthInput
           label="Password"
           icon="lock-closed-outline"
           placeholder="Password"
-          secureTextEntry={
-            !showPassword
-          }
+          secureTextEntry={!showPassword}
           value={password}
-          onChangeText={
-            setPassword
-          }
+          onChangeText={setPassword}
           rightIcon={
             showPassword
               ? 'eye-off-outline'
@@ -228,32 +199,23 @@ export default function LoginScreen({
           }
           onRightPress={() =>
             setShowPassword(
-              previous =>
-                !previous,
+              previous => !previous,
             )
           }
         />
 
-        <View
-          style={
-            styles.optionsRow
-          }
-        >
+        <View style={styles.optionsRow}>
           <Pressable
-            style={
-              styles.rememberRow
-            }
+            style={styles.rememberRow}
             onPress={() =>
               setRememberMe(
-                previous =>
-                  !previous,
+                previous => !previous,
               )
             }
           >
             <View
               style={[
                 styles.checkbox,
-
                 rememberMe &&
                   styles.checkboxSelected,
               ]}
@@ -262,18 +224,12 @@ export default function LoginScreen({
                 <Ionicons
                   name="checkmark"
                   size={14}
-                  color={
-                    COLORS.white
-                  }
+                  color={COLORS.white}
                 />
               ) : null}
             </View>
 
-            <Text
-              style={
-                styles.rememberText
-              }
-            >
+            <Text style={styles.rememberText}>
               Remember me
             </Text>
           </Pressable>
@@ -285,11 +241,7 @@ export default function LoginScreen({
               )
             }
           >
-            <Text
-              style={
-                styles.link
-              }
-            >
+            <Text style={styles.link}>
               Forgot Password?
             </Text>
           </Pressable>
@@ -298,107 +250,54 @@ export default function LoginScreen({
         <Pressable
           style={[
             styles.loginButton,
-
-            loading &&
-              styles.disabled,
+            loading && styles.disabled,
           ]}
           disabled={loading}
-          onPress={
-            handleLogin
-          }
+          onPress={handleLogin}
         >
-          <Text
-            style={
-              styles.loginButtonText
-            }
-          >
-            {loading
-              ? 'Logging in...'
-              : 'Login'}
+          <Text style={styles.loginButtonText}>
+            {loading ? 'Logging in...' : 'Login'}
           </Text>
         </Pressable>
 
-        <View
-          style={
-            styles.dividerRow
-          }
-        >
-          <View
-            style={
-              styles.divider
-            }
-          />
-
-          <Text
-            style={
-              styles.orText
-            }
-          >
-            OR
-          </Text>
-
-          <View
-            style={
-              styles.divider
-            }
-          />
+        <View style={styles.dividerRow}>
+          <View style={styles.divider} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.divider} />
         </View>
 
         <Pressable
-          style={
-            styles.googleButton
-          }
-          onPress={() => {
-            Alert.alert(
-              'Google Sign-In',
-              'Email/password authentication is enabled first. Google OAuth can be connected after the core authentication flow is completed.',
-            );
-          }}
+          style={[
+            styles.googleButton,
+            googleLoading && styles.disabled,
+          ]}
+          disabled={googleLoading}
+          onPress={handleGoogleLogin}
         >
-          <Text
-            style={
-              styles.googleIcon
-            }
-          >
-            G
-          </Text>
-
-          <Text
-            style={
-              styles.googleText
-            }
-          >
-            Continue with
-            Google
+          <Text style={styles.googleIcon}>G</Text>
+          <Text style={styles.googleText}>
+            {googleLoading
+              ? 'Connecting...'
+              : 'Continue with Google'}
           </Text>
         </Pressable>
 
-        <View
-          style={
-            styles.registerRow
-          }
-        >
-          <Text
-            style={
-              styles.registerText
-            }
-          >
-            Don&apos;t have
-            an account?{' '}
+        <View style={styles.registerRow}>
+          <Text style={styles.registerText}>
+            Don&apos;t have an account?{' '}
           </Text>
 
           <Pressable
             onPress={() =>
               navigation.navigate(
                 'RoleSelection',
+                {
+                  mode: 'email',
+                },
               )
             }
           >
-            <Text
-              style={
-                styles.link
-              }
-            >
+            <Text style={styles.link}>
               Register
             </Text>
           </Pressable>
@@ -408,173 +307,155 @@ export default function LoginScreen({
   );
 }
 
-const styles =
-  StyleSheet.create({
-    flex: {
-      flex: 1,
-      backgroundColor:
-        COLORS.white,
-    },
+const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+  },
 
-    container: {
-      flexGrow: 1,
-      justifyContent:
-        'center',
-      paddingHorizontal: 24,
-      paddingVertical: 40,
-      backgroundColor:
-        COLORS.white,
-    },
+  container: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 36,
+    backgroundColor: COLORS.white,
+  },
 
-    header: {
-      marginBottom: 32,
-    },
+  brandBadge: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+  },
 
-    title: {
-      fontSize: 31,
-      fontWeight: '800',
-      color:
-        COLORS.text,
-    },
+  header: {
+    marginBottom: 28,
+  },
 
-    subtitle: {
-      marginTop: 8,
-      fontSize: 14,
-      lineHeight: 20,
-      color:
-        COLORS.textSecondary,
-    },
+  title: {
+    fontSize: 31,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
 
-    optionsRow: {
-      marginTop: 3,
-      marginBottom: 24,
-      flexDirection: 'row',
-      justifyContent:
-        'space-between',
-      alignItems:
-        'center',
-    },
+  subtitle: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 20,
+    color: COLORS.textSecondary,
+  },
 
-    rememberRow: {
-      flexDirection: 'row',
-      alignItems:
-        'center',
-    },
+  optionsRow: {
+    marginTop: 3,
+    marginBottom: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
 
-    checkbox: {
-      width: 18,
-      height: 18,
-      borderWidth: 1.5,
-      borderColor:
-        COLORS.border,
-      borderRadius: 4,
-      marginRight: 7,
-      alignItems:
-        'center',
-      justifyContent:
-        'center',
-    },
+  rememberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 
-    checkboxSelected: {
-      backgroundColor:
-        COLORS.primary,
-      borderColor:
-        COLORS.primary,
-    },
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    borderRadius: 4,
+    marginRight: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-    rememberText: {
-      fontSize: 12,
-      color:
-        COLORS.textSecondary,
-    },
+  checkboxSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
 
-    link: {
-      fontSize: 13,
-      color:
-        COLORS.primary,
-      fontWeight: '600',
-    },
+  rememberText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+  },
 
-    loginButton: {
-      height: 52,
-      borderRadius: 9,
-      backgroundColor:
-        COLORS.primary,
-      alignItems:
-        'center',
-      justifyContent:
-        'center',
-    },
+  link: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
 
-    disabled: {
-      opacity: 0.6,
-    },
+  loginButton: {
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-    loginButtonText: {
-      color:
-        COLORS.white,
-      fontSize: 15,
-      fontWeight: '700',
-    },
+  disabled: {
+    opacity: 0.55,
+  },
 
-    dividerRow: {
-      marginVertical: 24,
-      flexDirection: 'row',
-      alignItems:
-        'center',
-    },
+  loginButtonText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '700',
+  },
 
-    divider: {
-      flex: 1,
-      height: 1,
-      backgroundColor:
-        COLORS.border,
-    },
+  dividerRow: {
+    marginVertical: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 
-    orText: {
-      marginHorizontal: 14,
-      color:
-        COLORS.textSecondary,
-      fontSize: 11,
-    },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
 
-    googleButton: {
-      height: 52,
-      borderWidth: 1,
-      borderColor:
-        COLORS.border,
-      borderRadius: 9,
-      flexDirection: 'row',
-      justifyContent:
-        'center',
-      alignItems:
-        'center',
-    },
+  orText: {
+    marginHorizontal: 14,
+    color: COLORS.textSecondary,
+    fontSize: 11,
+  },
 
-    googleIcon: {
-      marginRight: 12,
-      fontSize: 22,
-      fontWeight: '800',
-      color: '#4285F4',
-    },
+  googleButton: {
+    height: 52,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+  },
 
-    googleText: {
-      color:
-        COLORS.text,
-      fontSize: 15,
-      fontWeight: '600',
-    },
+  googleIcon: {
+    marginRight: 12,
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#4285F4',
+  },
 
-    registerRow: {
-      marginTop: 46,
-      flexDirection: 'row',
-      justifyContent:
-        'center',
-    },
+  googleText: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: '600',
+  },
 
-    registerText: {
-      color:
-        COLORS.textSecondary,
-      fontSize: 13,
-    },
-  });
+  registerRow: {
+    marginTop: 34,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+
+  registerText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+  },
+});

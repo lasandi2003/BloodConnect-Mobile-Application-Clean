@@ -1,10 +1,13 @@
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  GoogleAuthProvider,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updateProfile,
+  type User,
 } from 'firebase/auth';
 
 import {
@@ -14,6 +17,8 @@ import {
   setDoc,
 } from 'firebase/firestore';
 
+import { Platform } from 'react-native';
+
 import {
   auth,
   db,
@@ -21,6 +26,7 @@ import {
 
 import type {
   RegisterInput,
+  SocialProfileInput,
   UserProfile,
   UserRole,
 } from '../../../types/auth';
@@ -38,20 +44,15 @@ const validRoles: UserRole[] = [
 export async function getUserProfile(
   uid: string,
 ): Promise<UserProfile | null> {
-  const userRef = doc(
-    db,
-    USERS_COLLECTION,
-    uid,
+  const snapshot = await getDoc(
+    doc(db, USERS_COLLECTION, uid),
   );
-
-  const snapshot = await getDoc(userRef);
 
   if (!snapshot.exists()) {
     return null;
   }
 
   const data = snapshot.data();
-
   const role = data.role as UserRole;
 
   if (!validRoles.includes(role)) {
@@ -62,26 +63,33 @@ export async function getUserProfile(
 
   return {
     uid,
-
     fullName:
       data.fullName ??
       data.name ??
       'BloodConnect User',
-
-    email:
-      data.email ?? '',
-
-    phone:
-      data.phone ?? '',
-
+    email: data.email ?? '',
+    phone: data.phone ?? '',
     role,
-
-    healthcareType:
-      data.healthcareType,
-
-    status:
-      data.status ?? 'active',
+    healthcareType: data.healthcareType,
+    status: data.status ?? 'active',
+    photoURL: data.photoURL ?? undefined,
   };
+}
+
+async function recordSuccessfulLogin(
+  user: User,
+) {
+  await setDoc(
+    doc(db, USERS_COLLECTION, user.uid),
+    {
+      email: user.email ?? '',
+      lastLoginAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    },
+    {
+      merge: true,
+    },
+  );
 }
 
 export async function registerAccount(
@@ -90,7 +98,7 @@ export async function registerAccount(
   const credential =
     await createUserWithEmailAndPassword(
       auth,
-      input.email.trim(),
+      input.email.trim().toLowerCase(),
       input.password,
     );
 
@@ -98,45 +106,22 @@ export async function registerAccount(
     await updateProfile(
       credential.user,
       {
-        displayName:
-          input.fullName.trim(),
+        displayName: input.fullName.trim(),
       },
     );
 
     const profile: UserProfile = {
       uid: credential.user.uid,
-      fullName:
-        input.fullName.trim(),
-      email:
-        input.email
-          .trim()
-          .toLowerCase(),
-      phone:
-        input.phone.trim(),
-      role:
-        input.role,
-      status:
-        'active',
-
+      fullName: input.fullName.trim(),
+      email: input.email.trim().toLowerCase(),
+      phone: input.phone.trim(),
+      role: input.role,
+      status: 'active',
       ...(input.healthcareType
         ? {
-            healthcareType:
-              input.healthcareType,
+            healthcareType: input.healthcareType,
           }
         : {}),
-    };
-
-    const firestoreProfile: Record<
-      string,
-      unknown
-    > = {
-      ...profile,
-
-      createdAt:
-        serverTimestamp(),
-
-      updatedAt:
-        serverTimestamp(),
     };
 
     await setDoc(
@@ -145,21 +130,62 @@ export async function registerAccount(
         USERS_COLLECTION,
         credential.user.uid,
       ),
-      firestoreProfile,
+      {
+        ...profile,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp(),
+      },
     );
 
     return profile;
   } catch (error) {
     try {
-      await deleteUser(
-        credential.user,
-      );
+      await deleteUser(credential.user);
     } catch {
-      // Ignore cleanup error.
+      // Ignore cleanup errors.
     }
 
     throw error;
   }
+}
+
+export async function completeSocialProfile(
+  user: User,
+  input: SocialProfileInput,
+): Promise<UserProfile> {
+  const profile: UserProfile = {
+    uid: user.uid,
+    fullName:
+      input.fullName.trim() ||
+      user.displayName ||
+      'BloodConnect User',
+    email: user.email ?? '',
+    phone: input.phone.trim(),
+    role: input.role,
+    status: 'active',
+    photoURL: user.photoURL ?? undefined,
+    ...(input.healthcareType
+      ? {
+          healthcareType: input.healthcareType,
+        }
+      : {}),
+  };
+
+  await setDoc(
+    doc(db, USERS_COLLECTION, user.uid),
+    {
+      ...profile,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastLoginAt: serverTimestamp(),
+    },
+    {
+      merge: true,
+    },
+  );
+
+  return profile;
 }
 
 export async function loginAccount(
@@ -169,31 +195,70 @@ export async function loginAccount(
   const credential =
     await signInWithEmailAndPassword(
       auth,
-      email.trim(),
+      email.trim().toLowerCase(),
       password,
     );
 
-  const profile =
-    await getUserProfile(
-      credential.user.uid,
-    );
+  const profile = await getUserProfile(
+    credential.user.uid,
+  );
 
   if (!profile) {
     await signOut(auth);
 
     throw new Error(
-      'No BloodConnect profile was found for this account.',
+      'No BloodConnect Firestore profile was found for this account.',
     );
   }
 
-  if (
-    profile.status ===
-    'suspended'
-  ) {
+  if (profile.status === 'suspended') {
     await signOut(auth);
 
     throw new Error(
       'This account has been suspended.',
+    );
+  }
+
+  await recordSuccessfulLogin(
+    credential.user,
+  );
+
+  return profile;
+}
+
+export async function loginWithGoogleWeb(): Promise<
+  UserProfile | null
+> {
+  if (Platform.OS !== 'web') {
+    throw new Error(
+      'Google Sign-In on Android/iOS needs the native Google OAuth configuration. Use email login in Expo Go for now.',
+    );
+  }
+
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({
+    prompt: 'select_account',
+  });
+
+  const credential = await signInWithPopup(
+    auth,
+    provider,
+  );
+
+  const profile = await getUserProfile(
+    credential.user.uid,
+  );
+
+  if (profile) {
+    if (profile.status === 'suspended') {
+      await signOut(auth);
+      throw new Error(
+        'This account has been suspended.',
+      );
+    }
+
+    await recordSuccessfulLogin(
+      credential.user,
     );
   }
 
@@ -209,7 +274,7 @@ export async function resetAccountPassword(
 ) {
   await sendPasswordResetEmail(
     auth,
-    email.trim(),
+    email.trim().toLowerCase(),
   );
 }
 
@@ -222,43 +287,36 @@ export function getAuthErrorMessage(
     'code' in error
   ) {
     const code = String(
-      (
-        error as {
-          code?: string;
-        }
-      ).code,
+      (error as { code?: string }).code,
     );
 
     switch (code) {
       case 'auth/email-already-in-use':
         return 'An account already exists with this email address.';
-
       case 'auth/invalid-email':
         return 'Please enter a valid email address.';
-
       case 'auth/weak-password':
         return 'Please use a stronger password.';
-
       case 'auth/invalid-credential':
         return 'Incorrect email or password.';
-
       case 'auth/user-not-found':
         return 'No account was found with this email address.';
-
       case 'auth/wrong-password':
         return 'Incorrect password.';
-
       case 'auth/too-many-requests':
         return 'Too many attempts. Please try again later.';
-
       case 'auth/network-request-failed':
         return 'Network error. Please check your internet connection.';
+      case 'auth/popup-closed-by-user':
+        return 'Google sign-in was cancelled.';
+      case 'auth/popup-blocked':
+        return 'The browser blocked the Google sign-in popup.';
+      case 'auth/account-exists-with-different-credential':
+        return 'An account already exists with this email using another sign-in method.';
     }
   }
 
-  if (
-    error instanceof Error
-  ) {
+  if (error instanceof Error) {
     return error.message;
   }
 
