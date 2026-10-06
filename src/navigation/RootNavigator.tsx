@@ -32,11 +32,16 @@ import RoleSelectionScreen from '../features/auth/screens/RoleSelectionScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
 import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen';
 
+
+import DonorDashboardScreen from '../features/donor/screens/DonorDashboardScreen';
+import RequesterNavigator from '../features/emergencyRequest/navigation/RequesterNavigator';
+
 // Donor module
 import DonorNavigator from '../features/donor/navigation/DonorNavigator';
 
 // Other role dashboards
 import RequesterDashboardScreen from '../features/emergencyRequest/screens/RequesterDashboardScreen';
+
 import HealthcareDashboardScreen from '../features/verificationMatching/screens/HealthcareDashboardScreen';
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
@@ -148,6 +153,9 @@ function DashboardRouter() {
      * HOSPITAL / REQUESTER
      */
     case 'requester':
+
+      return <RequesterNavigator />;
+
       return (
         <RoleAppShell
           home={
@@ -200,6 +208,7 @@ function DashboardRouter() {
           }}
         />
       );
+
 
     /**
      * HEALTHCARE STAFF
