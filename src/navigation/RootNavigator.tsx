@@ -32,7 +32,7 @@ import RegisterScreen from '../features/auth/screens/RegisterScreen';
 import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen';
 
 import DonorDashboardScreen from '../features/donor/screens/DonorDashboardScreen';
-import RequesterDashboardScreen from '../features/emergencyRequest/screens/RequesterDashboardScreen';
+import RequesterNavigator from '../features/emergencyRequest/navigation/RequesterNavigator';
 import HealthcareDashboardScreen from '../features/verificationMatching/screens/HealthcareDashboardScreen';
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
@@ -132,40 +132,7 @@ function DashboardRouter() {
       );
 
     case 'requester':
-      return (
-        <RoleAppShell
-          home={<RequesterDashboardScreen />}
-          activity={{
-            title: 'My Requests',
-            description:
-              'Active and previous emergency requests will be shown here.',
-          }}
-          services={{
-            title: 'Create Request',
-            description:
-              'The emergency blood request creation flow will be connected here.',
-          }}
-          profile={{
-            title: 'Requester Profile',
-            description:
-              'Requester account details will be managed here.',
-          }}
-          tabLabels={{
-            activity: 'Requests',
-            services: 'Create',
-          }}
-          tabIcons={{
-            activity: {
-              icon: 'document-text-outline',
-              activeIcon: 'document-text',
-            },
-            services: {
-              icon: 'add-circle-outline',
-              activeIcon: 'add-circle',
-            },
-          }}
-        />
-      );
+      return <RequesterNavigator />;
 
     case 'healthcare':
       return (

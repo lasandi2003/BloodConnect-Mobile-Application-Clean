@@ -16,17 +16,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../../constants/colors';
 import { useAuth } from '../../auth/context/AuthContext';
 
-export default function RequesterDashboardScreen() {
+interface Props {
+  onCreateRequest: () => void;
+}
+
+export default function RequesterDashboardScreen({ onCreateRequest }: Props) {
   const { logout } = useAuth();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-
-  function handleCreateRequest() {
-    Alert.alert(
-      'Create Emergency Request',
-      'Patient information will be connected when we implement the next page.',
-    );
-  }
 
   function handleRequestHistory() {
     Alert.alert(
@@ -82,7 +79,7 @@ export default function RequesterDashboardScreen() {
 
           <Pressable
             style={({ pressed }) => [styles.createButton, pressed && styles.pressed]}
-            onPress={handleCreateRequest}
+            onPress={onCreateRequest}
             accessibilityRole="button"
             accessibilityLabel="Create Emergency Request"
           >
