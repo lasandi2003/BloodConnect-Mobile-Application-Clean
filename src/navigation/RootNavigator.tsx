@@ -40,6 +40,7 @@ import RequesterDashboardScreen from '../features/emergencyRequest/screens/Reque
 import VerificationMatchingNavigator from '../features/verificationMatching/navigation/VerificationMatchingNavigator';
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
+import DonorManagementScreen from '../features/inventoryAdmin/screens/DonorManagementScreen';
 
 import RoleAppShell from '../components/RoleAppShell';
 
@@ -273,12 +274,15 @@ function DashboardRouter() {
           home={
             <AdminDashboardScreen />
           }
+          activityContent={
+            <DonorManagementScreen />
+          }
           activity={{
             title:
-              'User Management',
+              'Donor Management',
 
             description:
-              'Registered users and account statuses will be managed here.',
+              'Search and review registered donors.',
           }}
           services={{
             title:
@@ -296,7 +300,7 @@ function DashboardRouter() {
           }}
           tabLabels={{
             activity:
-              'Users',
+              'Donors',
 
             services:
               'Manage',

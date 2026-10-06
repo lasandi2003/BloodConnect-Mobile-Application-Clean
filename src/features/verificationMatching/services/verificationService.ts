@@ -1,5 +1,7 @@
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   query,
   where,
@@ -184,4 +186,21 @@ export async function getPendingVerificationRequests(): Promise<EmergencyRequest
       urgencyRank[b.urgency] - urgencyRank[a.urgency] ||
       requestTime(b) - requestTime(a),
     );
+}
+
+export async function getVerificationRequestById(
+  requestId: string,
+): Promise<EmergencyRequest | null> {
+  const snapshot = await getDoc(
+    doc(db, EMERGENCY_REQUESTS, requestId),
+  );
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  return normalizeRequest(
+    snapshot.id,
+    snapshot.data() as Record<string, unknown>,
+  );
 }

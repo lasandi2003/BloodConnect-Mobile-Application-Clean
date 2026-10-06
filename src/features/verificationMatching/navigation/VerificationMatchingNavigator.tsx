@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import RoleAppShell from '../../../components/RoleAppShell';
 import HealthcareDashboardScreen from '../screens/HealthcareDashboardScreen';
 import PendingBloodRequestsScreen from '../screens/PendingBloodRequestsScreen';
+import RequestVerificationScreen from '../screens/RequestVerificationScreen';
 import type { VerificationMatchingStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<VerificationMatchingStackParamList>();
@@ -51,6 +52,7 @@ export default function VerificationMatchingNavigator() {
     >
       <Stack.Screen name="Dashboard" component={VerificationDashboardRoute} />
       <Stack.Screen name="PendingBloodRequests" component={PendingBloodRequestsScreen} />
+      <Stack.Screen name="RequestVerification" component={RequestVerificationScreen} />
     </Stack.Navigator>
   );
 }
