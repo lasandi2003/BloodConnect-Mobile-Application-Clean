@@ -25,14 +25,23 @@ import {
   useAuth,
 } from '../features/auth/context/AuthContext';
 
+// Authentication screens
 import SplashScreen from '../features/auth/screens/SplashScreen';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RoleSelectionScreen from '../features/auth/screens/RoleSelectionScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
 import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen';
 
+
 import DonorDashboardScreen from '../features/donor/screens/DonorDashboardScreen';
 import RequesterNavigator from '../features/emergencyRequest/navigation/RequesterNavigator';
+
+// Donor module
+import DonorNavigator from '../features/donor/navigation/DonorNavigator';
+
+// Other role dashboards
+import RequesterDashboardScreen from '../features/emergencyRequest/screens/RequesterDashboardScreen';
+
 import HealthcareDashboardScreen from '../features/verificationMatching/screens/HealthcareDashboardScreen';
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
@@ -44,8 +53,15 @@ import {
 } from '../constants/colors';
 
 const AuthStack =
-  createNativeStackNavigator<AuthStackParamList>();
+  createNativeStackNavigator<
+    AuthStackParamList
+  >();
 
+/**
+ * Authentication navigation
+ *
+ * Used only when there is no logged-in Firebase user/profile.
+ */
 function AuthNavigator() {
   return (
     <AuthStack.Navigator
@@ -78,165 +94,288 @@ function AuthNavigator() {
   );
 }
 
+/**
+ * Routes authenticated users according to
+ * the role saved in Firestore.
+ */
 function DashboardRouter() {
-  const { profile } = useAuth();
+  const {
+    profile,
+  } = useAuth();
 
   if (!profile) {
     return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorTitle}>
+      <View
+        style={
+          styles.errorContainer
+        }
+      >
+        <Text
+          style={
+            styles.errorTitle
+          }
+        >
           Unable to load account
         </Text>
-        <Text style={styles.errorMessage}>
-          Your BloodConnect profile could not be loaded.
+
+        <Text
+          style={
+            styles.errorMessage
+          }
+        >
+          Your BloodConnect
+          profile could not be
+          loaded.
         </Text>
       </View>
     );
   }
 
   switch (profile.role) {
+    /**
+     * DONOR
+     *
+     * Donors now have their own complete navigator:
+     *
+     * Dashboard
+     * Requests
+     * Request Details
+     * Confirmation
+     * History
+     * Profile
+     */
     case 'donor':
       return (
+        <DonorNavigator />
+      );
+
+    /**
+     * HOSPITAL / REQUESTER
+     */
+    case 'requester':
+
+      return <RequesterNavigator />;
+
+      return (
         <RoleAppShell
-          home={<DonorDashboardScreen />}
+          home={
+            <RequesterDashboardScreen />
+          }
           activity={{
-            title: 'Donation Activity',
+            title:
+              'My Requests',
+
             description:
-              'Emergency requests and donation history will be connected here.',
+              'Active and previous emergency requests will be shown here.',
           }}
           services={{
-            title: 'Donor Services',
+            title:
+              'Create Request',
+
             description:
-              'Availability, nearby requests and donor services will be available here.',
+              'The emergency blood request creation flow will be connected here.',
           }}
           profile={{
-            title: 'My Donor Profile',
+            title:
+              'Requester Profile',
+
             description:
-              'Your donor profile management screen will be connected here.',
+              'Requester account details will be managed here.',
           }}
           tabLabels={{
-            activity: 'Requests',
-            services: 'History',
+            activity:
+              'Requests',
+
+            services:
+              'Create',
           }}
           tabIcons={{
             activity: {
-              icon: 'alert-circle-outline',
-              activeIcon: 'alert-circle',
+              icon:
+                'document-text-outline',
+
+              activeIcon:
+                'document-text',
             },
+
             services: {
-              icon: 'time-outline',
-              activeIcon: 'time',
+              icon:
+                'add-circle-outline',
+
+              activeIcon:
+                'add-circle',
             },
           }}
         />
       );
 
-    case 'requester':
-      return <RequesterNavigator />;
 
+    /**
+     * HEALTHCARE STAFF
+     */
     case 'healthcare':
       return (
         <RoleAppShell
-          home={<HealthcareDashboardScreen />}
+          home={
+            <HealthcareDashboardScreen />
+          }
           activity={{
-            title: 'Pending Requests',
+            title:
+              'Pending Requests',
+
             description:
               'Requests waiting for healthcare verification will be shown here.',
           }}
           services={{
-            title: 'Donor Matching',
+            title:
+              'Donor Matching',
+
             description:
               'Compatible donor matching tools will be connected here.',
           }}
           profile={{
-            title: 'Healthcare Profile',
+            title:
+              'Healthcare Profile',
+
             description:
               'Doctor or nurse account details will be managed here.',
           }}
           tabLabels={{
-            activity: 'Pending',
-            services: 'Matches',
+            activity:
+              'Pending',
+
+            services:
+              'Matches',
           }}
           tabIcons={{
             activity: {
-              icon: 'hourglass-outline',
-              activeIcon: 'hourglass',
+              icon:
+                'hourglass-outline',
+
+              activeIcon:
+                'hourglass',
             },
+
             services: {
-              icon: 'people-outline',
-              activeIcon: 'people',
+              icon:
+                'people-outline',
+
+              activeIcon:
+                'people',
             },
           }}
         />
       );
 
+    /**
+     * BLOOD BANK
+     */
     case 'bloodBank':
       return (
         <RoleAppShell
-          home={<BloodBankDashboardScreen />}
+          home={
+            <BloodBankDashboardScreen />
+          }
           activity={{
-            title: 'Blood Inventory',
+            title:
+              'Blood Inventory',
+
             description:
               'Blood stock levels and inventory updates will be connected here.',
           }}
           services={{
-            title: 'Emergency Requests',
+            title:
+              'Emergency Requests',
+
             description:
               'Blood-bank emergency request management will be connected here.',
           }}
           profile={{
-            title: 'Blood Bank Profile',
+            title:
+              'Blood Bank Profile',
+
             description:
               'Blood-bank account details will be managed here.',
           }}
           tabLabels={{
-            activity: 'Inventory',
-            services: 'Requests',
+            activity:
+              'Inventory',
+
+            services:
+              'Requests',
           }}
           tabIcons={{
             activity: {
-              icon: 'water-outline',
-              activeIcon: 'water',
+              icon:
+                'water-outline',
+
+              activeIcon:
+                'water',
             },
+
             services: {
-              icon: 'alert-outline',
-              activeIcon: 'alert',
+              icon:
+                'alert-outline',
+
+              activeIcon:
+                'alert',
             },
           }}
         />
       );
 
+    /**
+     * ADMIN
+     */
     case 'admin':
       return (
         <RoleAppShell
-          home={<AdminDashboardScreen />}
+          home={
+            <AdminDashboardScreen />
+          }
           activity={{
-            title: 'User Management',
+            title:
+              'User Management',
+
             description:
               'Registered users and account statuses will be managed here.',
           }}
           services={{
-            title: 'System Management',
+            title:
+              'System Management',
+
             description:
               'Administration tools and system monitoring will be connected here.',
           }}
           profile={{
-            title: 'Admin Profile',
+            title:
+              'Admin Profile',
+
             description:
               'Administrator account details will be managed here.',
           }}
           tabLabels={{
-            activity: 'Users',
-            services: 'Manage',
+            activity:
+              'Users',
+
+            services:
+              'Manage',
           }}
           tabIcons={{
             activity: {
-              icon: 'people-outline',
-              activeIcon: 'people',
+              icon:
+                'people-outline',
+
+              activeIcon:
+                'people',
             },
+
             services: {
-              icon: 'settings-outline',
-              activeIcon: 'settings',
+              icon:
+                'settings-outline',
+
+              activeIcon:
+                'settings',
             },
           }}
         />
@@ -244,18 +383,36 @@ function DashboardRouter() {
 
     default:
       return (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>
+        <View
+          style={
+            styles.errorContainer
+          }
+        >
+          <Text
+            style={
+              styles.errorTitle
+            }
+          >
             Invalid user role
           </Text>
-          <Text style={styles.errorMessage}>
-            This account does not have a valid BloodConnect role.
+
+          <Text
+            style={
+              styles.errorMessage
+            }
+          >
+            This account does not
+            have a valid
+            BloodConnect role.
           </Text>
         </View>
       );
   }
 }
 
+/**
+ * Main application navigation.
+ */
 export default function RootNavigator() {
   const {
     user,
@@ -263,21 +420,39 @@ export default function RootNavigator() {
     initializing,
   } = useAuth();
 
-  const [splashFinished, setSplashFinished] =
-    useState(false);
+  const [
+    splashFinished,
+    setSplashFinished,
+  ] = useState(false);
 
   useEffect(() => {
-  const timer = setTimeout(() => {
-    setSplashFinished(true);
-  }, 2500);
+    const timer =
+      setTimeout(() => {
+        setSplashFinished(
+          true,
+        );
+      }, 2500);
 
-  return () => {
-    clearTimeout(timer);
-  };
-}, []);
+    return () => {
+      clearTimeout(
+        timer,
+      );
+    };
+  }, []);
 
-  if (initializing || !splashFinished) {
-    return <SplashScreen />;
+  /*
+   * Keep splash visible:
+   *
+   * 1. for at least 2.5 seconds
+   * 2. while Firebase checks login state
+   */
+  if (
+    initializing ||
+    !splashFinished
+  ) {
+    return (
+      <SplashScreen />
+    );
   }
 
   return (
@@ -291,27 +466,48 @@ export default function RootNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 30,
-    backgroundColor: COLORS.background,
-  },
+const styles =
+  StyleSheet.create({
+    errorContainer: {
+      flex: 1,
 
-  errorTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: COLORS.text,
-    textAlign: 'center',
-  },
+      justifyContent:
+        'center',
 
-  errorMessage: {
-    marginTop: 10,
-    fontSize: 14,
-    lineHeight: 21,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-  },
-});
+      alignItems:
+        'center',
+
+      paddingHorizontal:
+        30,
+
+      backgroundColor:
+        COLORS.background,
+    },
+
+    errorTitle: {
+      fontSize: 22,
+
+      fontWeight:
+        '800',
+
+      color:
+        COLORS.text,
+
+      textAlign:
+        'center',
+    },
+
+    errorMessage: {
+      marginTop: 10,
+
+      fontSize: 14,
+
+      lineHeight: 21,
+
+      color:
+        COLORS.textSecondary,
+
+      textAlign:
+        'center',
+    },
+  });
