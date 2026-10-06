@@ -37,7 +37,7 @@ import DonorNavigator from '../features/donor/navigation/DonorNavigator';
 
 // Other role dashboards
 import RequesterDashboardScreen from '../features/emergencyRequest/screens/RequesterDashboardScreen';
-import HealthcareDashboardScreen from '../features/verificationMatching/screens/HealthcareDashboardScreen';
+import VerificationMatchingNavigator from '../features/verificationMatching/navigation/VerificationMatchingNavigator';
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
 
@@ -205,58 +205,7 @@ function DashboardRouter() {
      * HEALTHCARE STAFF
      */
     case 'healthcare':
-      return (
-        <RoleAppShell
-          home={
-            <HealthcareDashboardScreen />
-          }
-          activity={{
-            title:
-              'Pending Requests',
-
-            description:
-              'Requests waiting for healthcare verification will be shown here.',
-          }}
-          services={{
-            title:
-              'Donor Matching',
-
-            description:
-              'Compatible donor matching tools will be connected here.',
-          }}
-          profile={{
-            title:
-              'Healthcare Profile',
-
-            description:
-              'Doctor or nurse account details will be managed here.',
-          }}
-          tabLabels={{
-            activity:
-              'Pending',
-
-            services:
-              'Matches',
-          }}
-          tabIcons={{
-            activity: {
-              icon:
-                'hourglass-outline',
-
-              activeIcon:
-                'hourglass',
-            },
-
-            services: {
-              icon:
-                'people-outline',
-
-              activeIcon:
-                'people',
-            },
-          }}
-        />
-      );
+      return <VerificationMatchingNavigator />;
 
     /**
      * BLOOD BANK

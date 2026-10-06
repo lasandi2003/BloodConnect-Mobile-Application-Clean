@@ -49,6 +49,7 @@ interface PlaceholderConfig {
 
 interface Props {
   home: ReactNode;
+  activityContent?: ReactNode;
   activity: PlaceholderConfig;
   services: PlaceholderConfig;
   profile: PlaceholderConfig;
@@ -62,6 +63,10 @@ interface Props {
       }
     >
   >;
+  activeTabColor?: string;
+  bottomBorderColor?: string;
+  initialTab?: TabKey;
+  tabPressHandlers?: Partial<Record<TabKey, () => void>>;
 }
 
 const defaultTabs: TabItem[] = [
@@ -93,14 +98,18 @@ const defaultTabs: TabItem[] = [
 
 export default function RoleAppShell({
   home,
+  activityContent,
   activity,
   services,
   profile,
   tabLabels,
   tabIcons,
+  activeTabColor = COLORS.primary,
+  bottomBorderColor = COLORS.border,
+  initialTab = 'home',
+  tabPressHandlers,
 }: Props) {
-  const [activeTab, setActiveTab] =
-    useState<TabKey>('home');
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
   const tabs = defaultTabs.map(tab => ({
     ...tab,
@@ -116,11 +125,8 @@ export default function RoleAppShell({
   let content: ReactNode = home;
 
   if (activeTab === 'activity') {
-    content = (
-      <PlaceholderScreen
-        title={activity.title}
-        description={activity.description}
-      />
+    content = activityContent ?? (
+      <PlaceholderScreen title={activity.title} description={activity.description} />
     );
   }
 
@@ -151,7 +157,12 @@ export default function RoleAppShell({
         {content}
       </View>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { borderTopColor: bottomBorderColor },
+        ]}
+      >
         {tabs.map(tab => {
           const isActive =
             activeTab === tab.key;
@@ -160,9 +171,14 @@ export default function RoleAppShell({
             <Pressable
               key={tab.key}
               style={styles.tabButton}
-              onPress={() =>
-                setActiveTab(tab.key)
-              }
+              onPress={() => {
+                const handler = tabPressHandlers?.[tab.key];
+                if (handler) {
+                  handler();
+                  return;
+                }
+                setActiveTab(tab.key);
+              }}
             >
               <Ionicons
                 name={
@@ -173,7 +189,7 @@ export default function RoleAppShell({
                 size={21}
                 color={
                   isActive
-                    ? COLORS.primary
+                    ? activeTabColor
                     : '#8A8A8A'
                 }
               />
@@ -181,8 +197,10 @@ export default function RoleAppShell({
               <Text
                 style={[
                   styles.tabLabel,
-                  isActive &&
-                    styles.activeTabLabel,
+                isActive && [
+                  styles.activeTabLabel,
+                  { color: activeTabColor },
+                ],
                 ]}
                 numberOfLines={1}
               >
