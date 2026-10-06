@@ -87,6 +87,7 @@ function DashboardRouter() {
         <Text style={styles.errorTitle}>
           Unable to load account
         </Text>
+
         <Text style={styles.errorMessage}>
           Your BloodConnect profile could not be loaded.
         </Text>
@@ -281,6 +282,7 @@ function DashboardRouter() {
           <Text style={styles.errorTitle}>
             Invalid user role
           </Text>
+
           <Text style={styles.errorMessage}>
             This account does not have a valid BloodConnect role.
           </Text>
@@ -300,14 +302,14 @@ export default function RootNavigator() {
     useState(false);
 
   useEffect(() => {
-  const timer = setTimeout(() => {
-    setSplashFinished(true);
-  }, 2500);
+    const timer = setTimeout(() => {
+      setSplashFinished(true);
+    }, 2500);
 
-  return () => {
-    clearTimeout(timer);
-  };
-}, []);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
 
   if (initializing || !splashFinished) {
     return <SplashScreen />;
