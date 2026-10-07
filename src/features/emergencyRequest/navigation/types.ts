@@ -4,4 +4,5 @@ export type RequesterStackParamList = {
   RequesterDashboard: undefined;
   PatientInformation: undefined;
   HospitalDetails: { patient: PatientInformation };
+  ReviewRequest: undefined;
 };

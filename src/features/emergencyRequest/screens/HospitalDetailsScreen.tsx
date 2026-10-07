@@ -15,7 +15,7 @@ import { BLOOD_GROUPS, URGENCY_LEVELS, validateHospitalDetails, type HospitalFor
 type Props = NativeStackScreenProps<RequesterStackParamList, 'HospitalDetails'>;
 
 export default function HospitalDetailsScreen({ navigation, route }: Props) {
-  const { hospitalForm, updateHospital, preparedDraft, prepareDraft, clearPreparedDraft } = useEmergencyRequestDraft();
+  const { hospitalForm, updateHospital, prepareDraft, clearPreparedDraft } = useEmergencyRequestDraft();
   const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
   const validation = hasAttemptedNext ? validateHospitalDetails(hospitalForm) : null;
   const errors: HospitalFormErrors = validation && !validation.valid ? validation.errors : {};
@@ -31,6 +31,7 @@ export default function HospitalDetailsScreen({ navigation, route }: Props) {
     const result = validateHospitalDetails(hospitalForm);
     if (result.valid) {
       prepareDraft({ patient: route.params.patient, ...result.details });
+      navigation.navigate('ReviewRequest');
     } else {
       clearPreparedDraft();
     }
@@ -76,12 +77,6 @@ export default function HospitalDetailsScreen({ navigation, route }: Props) {
           {Object.keys(errors).length > 0 ? (
             <View style={styles.message} accessibilityRole="alert" accessibilityLiveRegion="polite">
               <Text style={styles.errorText}>Please correct the highlighted fields above.</Text>
-            </View>
-          ) : null}
-          {preparedDraft ? (
-            <View style={styles.message} accessibilityRole="alert" accessibilityLiveRegion="polite">
-              <Text style={styles.successTitle}>Request details validated</Text>
-              <Text style={styles.messageText}>Your patient and hospital details are held for this session. Review will be connected next. No request has been submitted.</Text>
             </View>
           ) : null}
           <View style={styles.actions}>
@@ -141,8 +136,6 @@ const styles = StyleSheet.create({
   fieldError: { color: COLORS.danger, fontSize: 12, lineHeight: 18, marginTop: 7 },
   message: { padding: 14, borderRadius: 10, backgroundColor: COLORS.white, marginBottom: 16 },
   errorText: { color: COLORS.danger, fontSize: 13, lineHeight: 20 },
-  successTitle: { color: COLORS.success, fontSize: 14, fontWeight: '700' },
-  messageText: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 20, marginTop: 5 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 10 },
   secondaryButton: { flex: 1, minHeight: 52, borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary,
     backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' },

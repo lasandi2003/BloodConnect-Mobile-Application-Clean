@@ -16,6 +16,11 @@ export function parseCalendarDate(value: string): Date | null {
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null;
 }
 
+export function formatDisplayDate(value: string) {
+  const date = parseCalendarDate(value);
+  return date ? date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : value;
+}
+
 type HospitalValidationResult =
   | { valid: false; errors: HospitalFormErrors }
   | { valid: true; details: Omit<EmergencyRequestDraft, 'patient'> };
