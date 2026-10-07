@@ -4,14 +4,23 @@ import { createNativeStackNavigator, type NativeStackScreenProps } from '@react-
 import RoleAppShell from '../../../components/RoleAppShell';
 import RequesterDashboardScreen from '../screens/RequesterDashboardScreen';
 import PatientInformationScreen from '../screens/PatientInformationScreen';
+import HospitalDetailsScreen from '../screens/HospitalDetailsScreen';
+import { EmergencyRequestDraftProvider, useEmergencyRequestDraft } from '../context/EmergencyRequestDraftContext';
 import type { RequesterStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RequesterStackParamList>();
 
 function RequesterHome({ navigation }: NativeStackScreenProps<RequesterStackParamList, 'RequesterDashboard'>) {
+  const { resetDraft } = useEmergencyRequestDraft();
+
+  function handleCreateRequest() {
+    resetDraft();
+    navigation.navigate('PatientInformation');
+  }
+
   return (
     <RoleAppShell
-      home={<RequesterDashboardScreen onCreateRequest={() => navigation.navigate('PatientInformation')} />}
+      home={<RequesterDashboardScreen onCreateRequest={handleCreateRequest} />}
       activity={{
         title: 'My Requests',
         description: 'Active and previous emergency requests will be shown here.',
@@ -35,12 +44,15 @@ function RequesterHome({ navigation }: NativeStackScreenProps<RequesterStackPara
 
 export default function RequesterNavigator() {
   return (
-    <Stack.Navigator
-      initialRouteName="RequesterDashboard"
-      screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
-    >
-      <Stack.Screen name="RequesterDashboard" component={RequesterHome} />
-      <Stack.Screen name="PatientInformation" component={PatientInformationScreen} />
-    </Stack.Navigator>
+    <EmergencyRequestDraftProvider>
+      <Stack.Navigator
+        initialRouteName="RequesterDashboard"
+        screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
+      >
+        <Stack.Screen name="RequesterDashboard" component={RequesterHome} />
+        <Stack.Screen name="PatientInformation" component={PatientInformationScreen} />
+        <Stack.Screen name="HospitalDetails" component={HospitalDetailsScreen} />
+      </Stack.Navigator>
+    </EmergencyRequestDraftProvider>
   );
 }

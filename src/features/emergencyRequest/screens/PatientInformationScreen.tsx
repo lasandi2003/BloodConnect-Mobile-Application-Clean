@@ -1,4 +1,4 @@
-import React, { useState, type ComponentProps } from 'react';
+import React, { useState } from 'react';
 
 import {
   Keyboard,
@@ -9,8 +9,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
-  type TextInputProps,
   View,
 } from 'react-native';
 
@@ -21,8 +19,11 @@ import { usePreventRemove, type NavigationAction } from '@react-navigation/nativ
 
 import { COLORS } from '../../../constants/colors';
 import type { RequesterStackParamList } from '../navigation/types';
-import type { PatientInformation, PatientInformationForm } from '../types/emergencyRequest';
+import type { PatientInformationForm } from '../types/emergencyRequest';
 import { PATIENT_GENDERS, validatePatientInformation, type PatientFormErrors } from '../utils/patientValidation';
+import PatientField from '../components/RequestInput';
+import RequestProgress from '../components/RequestProgress';
+import { useEmergencyRequestDraft } from '../context/EmergencyRequestDraftContext';
 
 type Props = NativeStackScreenProps<RequesterStackParamList, 'PatientInformation'>;
 
@@ -39,7 +40,7 @@ const initialForm: PatientInformationForm = {
 export default function PatientInformationScreen({ navigation }: Props) {
   const [form, setForm] = useState<PatientInformationForm>(initialForm);
   const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
-  const [preparedPatient, setPreparedPatient] = useState<PatientInformation | null>(null);
+  const { clearPreparedDraft, resetDraft } = useEmergencyRequestDraft();
   const [pendingLeaveAction, setPendingLeaveAction] = useState<NavigationAction | null>(null);
   const validation = hasAttemptedNext ? validatePatientInformation(form) : null;
   const errors: PatientFormErrors = validation && !validation.valid ? validation.errors : {};
@@ -56,6 +57,7 @@ export default function PatientInformationScreen({ navigation }: Props) {
 
   function discardInformation() {
     if (pendingLeaveAction) {
+      resetDraft();
       navigation.dispatch(pendingLeaveAction);
       setPendingLeaveAction(null);
     }
@@ -63,11 +65,12 @@ export default function PatientInformationScreen({ navigation }: Props) {
 
   function updateForm(values: Partial<PatientInformationForm>) {
     setForm(previous => ({ ...previous, ...values }));
-    setPreparedPatient(null);
+    clearPreparedDraft();
   }
 
   function handleCancel() {
     Keyboard.dismiss();
+    if (!hasEnteredInformation) resetDraft();
     navigation.goBack();
   }
 
@@ -77,12 +80,11 @@ export default function PatientInformationScreen({ navigation }: Props) {
     const result = validatePatientInformation(form);
 
     if (!result.valid) {
-      setPreparedPatient(null);
+      clearPreparedDraft();
       return;
     }
 
-    // Temporary local data only. The hospital page will consume this in the next step.
-    setPreparedPatient(result.patient);
+    navigation.navigate('HospitalDetails', { patient: result.patient });
   }
 
   return (
@@ -99,29 +101,7 @@ export default function PatientInformationScreen({ navigation }: Props) {
 
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <View style={styles.progress} accessible accessibilityRole="progressbar"
-            accessibilityValue={{ min: 1, max: 3, now: 1, text: 'Step 1 of 3: Patient information' }}>
-            <View style={styles.progressHeading}>
-              <Text style={styles.progressTitle}>Request progress</Text>
-              <View style={styles.progressBadge}>
-                <Text style={styles.progressBadgeText}>Step 1 of 3</Text>
-              </View>
-            </View>
-            <View style={styles.progressTrack}>
-              <View style={styles.progressLine} />
-              {['Patient', 'Hospital', 'Review'].map((step, index) => (
-                <View key={step} style={styles.progressStep}>
-                  <View style={[styles.stepHalo, index === 0 && styles.activeHalo]}>
-                    <View style={[styles.stepCircle, index === 0 && styles.activeCircle]}>
-                      <Text style={[styles.stepNumber, index === 0 && styles.activeNumber]}>{index + 1}</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.stepLabel, index === 0 && styles.activeLabel]}>{step}</Text>
-                  <Text style={styles.stepStatus}>{index === 0 ? 'In progress' : 'Upcoming'}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
+          <RequestProgress activeStep={1} />
 
           <Text style={styles.pageTitle}>Patient Information</Text>
           <Text style={styles.description}>Enter the patient and representative details. Fields marked * are required.</Text>
@@ -176,12 +156,6 @@ export default function PatientInformationScreen({ navigation }: Props) {
               <Text style={styles.errorText}>Please correct the highlighted fields above.</Text>
             </View>
           ) : null}
-          {preparedPatient ? (
-            <View style={styles.message} accessibilityRole="alert" accessibilityLiveRegion="polite">
-              <Text style={styles.successTitle}>Patient details validated</Text>
-              <Text style={styles.messageText}>Your information is held on this page. Hospital Details will be connected next. No request has been submitted.</Text>
-            </View>
-          ) : null}
 
           <View style={styles.actions}>
             <Pressable style={styles.cancelButton} onPress={handleCancel} accessibilityRole="button">
@@ -218,26 +192,6 @@ export default function PatientInformationScreen({ navigation }: Props) {
   );
 }
 
-interface PatientFieldProps extends TextInputProps {
-  label: string;
-  icon: ComponentProps<typeof Ionicons>['name'];
-  error?: string;
-}
-
-function PatientField({ error, label, icon, ...props }: PatientFieldProps) {
-  return (
-    <View style={styles.patientField}>
-      <Text style={styles.fieldLabel}>{label} <Text style={styles.requiredMarker}>*</Text></Text>
-      <View style={[styles.inputContainer, error && styles.invalidInput]}>
-        <Ionicons name={icon} size={18} color={COLORS.textSecondary} />
-        <TextInput {...props} style={styles.input} placeholderTextColor={COLORS.textMuted}
-          accessibilityHint={error ?? 'Required field'} />
-      </View>
-      {error ? <Text style={styles.fieldError} accessibilityRole="alert">{error}</Text> : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   safe: { flex: 1, backgroundColor: COLORS.softBackground },
@@ -246,38 +200,12 @@ const styles = StyleSheet.create({
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '700', color: COLORS.text },
   headerSpacer: { width: 44 },
   container: { paddingHorizontal: 22, paddingTop: 8, paddingBottom: 28 },
-  progress: { marginBottom: 26, paddingHorizontal: 14, paddingTop: 14, paddingBottom: 18,
-    backgroundColor: COLORS.white, borderRadius: 20, borderWidth: 1, borderColor: COLORS.border },
-  progressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  progressTitle: { flexShrink: 1, fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
-  progressBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: COLORS.softBackground },
-  progressBadgeText: { fontSize: 11, fontWeight: '700', color: COLORS.primary },
-  progressTrack: { flexDirection: 'row', marginTop: 16 },
-  progressLine: { position: 'absolute', top: 21, left: '16.67%', right: '16.67%', height: 2,
-    borderRadius: 1, backgroundColor: COLORS.border },
-  progressStep: { flex: 1, alignItems: 'center' },
-  stepHalo: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.white,
-    alignItems: 'center', justifyContent: 'center' },
-  activeHalo: { backgroundColor: COLORS.primaryLight },
-  stepCircle: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.inputBackground, alignItems: 'center', justifyContent: 'center' },
-  activeCircle: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  stepNumber: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary },
-  activeNumber: { color: COLORS.white },
-  stepLabel: { marginTop: 8, fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },
-  activeLabel: { color: COLORS.primary, fontWeight: '800' },
-  stepStatus: { marginTop: 4, fontSize: 10, color: COLORS.textSecondary },
   pageTitle: { fontSize: 23, fontWeight: '800', color: COLORS.text },
   description: { marginTop: 7, marginBottom: 22, fontSize: 13, lineHeight: 20, color: COLORS.textSecondary },
   detailsRow: { flexDirection: 'row', gap: 12 },
   ageField: { flex: 1 },
   genderField: { flex: 2, marginBottom: 16 },
   fieldLabel: { marginBottom: 7, fontSize: 13, fontWeight: '500', color: COLORS.textSecondary },
-  patientField: { marginBottom: 16, minWidth: 0 },
-  inputContainer: { minHeight: 52, borderRadius: 10, backgroundColor: COLORS.inputBackground,
-    paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.inputBackground },
-  invalidInput: { borderColor: COLORS.danger },
-  input: { flex: 1, minWidth: 0, marginLeft: 10, fontSize: 15, color: COLORS.text },
   genderChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   genderChoice: { flexGrow: 1, minHeight: 52, paddingHorizontal: 8, borderRadius: 10,
     backgroundColor: COLORS.inputBackground, borderWidth: 1, borderColor: COLORS.border,
@@ -290,10 +218,7 @@ const styles = StyleSheet.create({
   message: { padding: 14, borderRadius: 10, backgroundColor: COLORS.white, marginBottom: 16 },
   errorText: { color: COLORS.danger, fontSize: 13, lineHeight: 20 },
   requiredMarker: { color: COLORS.primary },
-  fieldError: { color: COLORS.danger, fontSize: 12, lineHeight: 18, marginTop: 7 },
   genderError: { color: COLORS.danger, fontSize: 12, lineHeight: 18, marginTop: 7 },
-  successTitle: { color: COLORS.success, fontSize: 14, fontWeight: '700' },
-  messageText: { color: COLORS.textSecondary, fontSize: 13, lineHeight: 20, marginTop: 5 },
   actions: { flexDirection: 'row', gap: 12, marginTop: 10 },
   cancelButton: { flex: 1, minHeight: 52, borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary,
     backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' },
