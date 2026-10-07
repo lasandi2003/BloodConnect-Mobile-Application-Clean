@@ -5,6 +5,7 @@ import RoleAppShell from '../../../components/RoleAppShell';
 import RequesterDashboardScreen from '../screens/RequesterDashboardScreen';
 import PatientInformationScreen from '../screens/PatientInformationScreen';
 import HospitalDetailsScreen from '../screens/HospitalDetailsScreen';
+import ReviewRequestScreen from '../screens/ReviewRequestScreen';
 import { EmergencyRequestDraftProvider, useEmergencyRequestDraft } from '../context/EmergencyRequestDraftContext';
 import type { RequesterStackParamList } from './types';
 
@@ -52,6 +53,7 @@ export default function RequesterNavigator() {
         <Stack.Screen name="RequesterDashboard" component={RequesterHome} />
         <Stack.Screen name="PatientInformation" component={PatientInformationScreen} />
         <Stack.Screen name="HospitalDetails" component={HospitalDetailsScreen} />
+        <Stack.Screen name="ReviewRequest" component={ReviewRequestScreen} />
       </Stack.Navigator>
     </EmergencyRequestDraftProvider>
   );
