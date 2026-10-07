@@ -4,6 +4,8 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
+  updateDoc,
   where,
 } from 'firebase/firestore';
 
@@ -13,9 +15,11 @@ import {
 
 import type {
   BloodGroup,
+  DonorProfile,
   EmergencyRequest,
   RequestUrgency,
 } from '../../donor/types/donor';
+import { getDonorProfiles } from '../../donor/services/donorService';
 
 const EMERGENCY_REQUESTS = 'emergencyRequests';
 const DONOR_RESPONSES = 'donorResponses';
@@ -202,5 +206,22 @@ export async function getVerificationRequestById(
   return normalizeRequest(
     snapshot.id,
     snapshot.data() as Record<string, unknown>,
+  );
+}
+
+export async function verifyRequest(requestId: string): Promise<void> {
+  await updateDoc(doc(db, EMERGENCY_REQUESTS, requestId), {
+    verified: true,
+    status: 'verified',
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function getMatchingDonors(
+  bloodGroup: BloodGroup,
+): Promise<DonorProfile[]> {
+  const donors = await getDonorProfiles();
+  return donors.filter(
+    donor => donor.bloodGroup === bloodGroup && donor.isAvailable,
   );
 }

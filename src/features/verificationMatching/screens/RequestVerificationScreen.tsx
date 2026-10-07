@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../../constants/colors';
 import type { EmergencyRequest } from '../../donor/types/donor';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
-import { getVerificationRequestById } from '../services/verificationService';
+import { getVerificationRequestById, verifyRequest } from '../services/verificationService';
 
 type Props = NativeStackScreenProps<
   VerificationMatchingStackParamList,
@@ -118,6 +118,8 @@ export default function RequestVerificationScreen({ route, navigation }: Props) 
   const [request, setRequest] = useState<EmergencyRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   const loadRequest = useCallback(async () => {
     setLoading(true);
@@ -137,6 +139,21 @@ export default function RequestVerificationScreen({ route, navigation }: Props) 
   useEffect(() => {
     void loadRequest();
   }, [loadRequest]);
+
+  const onVerifyRequest = useCallback(async () => {
+    if (!request || verifying) return;
+    setVerifying(true);
+    setVerificationError(null);
+    try {
+      await verifyRequest(request.id);
+      navigation.navigate('MatchingDonors', { requestId: request.id });
+    } catch (error) {
+      console.error('Request verification action error:', error);
+      setVerificationError('Could not verify this request. Check your access and try again.');
+    } finally {
+      setVerifying(false);
+    }
+  }, [navigation, request, verifying]);
 
   const submittedAt = request ? formatSubmittedAt(request) : null;
   const urgent = request?.urgency === 'critical' || request?.urgency === 'urgent';
@@ -244,6 +261,7 @@ export default function RequestVerificationScreen({ route, navigation }: Props) 
               </DetailCard>
             </ScrollView>
 
+            {verificationError ? <Text accessibilityRole="alert" style={styles.actionError}>{verificationError}</Text> : null}
             <View style={styles.actions}>
               <Pressable
                 accessibilityRole="button"
@@ -256,12 +274,13 @@ export default function RequestVerificationScreen({ route, navigation }: Props) 
               </Pressable>
               <Pressable
                 accessibilityRole="button"
-                accessibilityState={{ disabled: true }}
-                disabled
+                accessibilityState={{ disabled: verifying, busy: verifying }}
+                disabled={verifying}
+                onPress={() => void onVerifyRequest()}
                 style={styles.verifyButton}
               >
-                <Ionicons name="shield-checkmark-outline" size={17} color={COLORS.white} />
-                <Text style={styles.verifyButtonText}>Verify request</Text>
+                {verifying ? <ActivityIndicator size="small" color={COLORS.white} /> : <Ionicons name="shield-checkmark-outline" size={17} color={COLORS.white} />}
+                <Text style={styles.verifyButtonText}>{verifying ? 'Verifying…' : 'Verify request'}</Text>
               </Pressable>
             </View>
           </>
@@ -532,6 +551,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F5',
     borderTopWidth: 1,
     borderTopColor: '#F2E1E4',
+  },
+  actionError: {
+    paddingTop: 6,
+    color: COLORS.primary,
+    fontSize: 11,
+    textAlign: 'center',
   },
   rejectButton: {
     flex: 0.9,

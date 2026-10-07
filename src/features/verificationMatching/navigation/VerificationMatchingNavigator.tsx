@@ -8,6 +8,7 @@ import RoleAppShell from '../../../components/RoleAppShell';
 import HealthcareDashboardScreen from '../screens/HealthcareDashboardScreen';
 import PendingBloodRequestsScreen from '../screens/PendingBloodRequestsScreen';
 import RequestVerificationScreen from '../screens/RequestVerificationScreen';
+import MatchingDonorsScreen from '../screens/MatchingDonorsScreen';
 import type { VerificationMatchingStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<VerificationMatchingStackParamList>();
@@ -53,6 +54,7 @@ export default function VerificationMatchingNavigator() {
       <Stack.Screen name="Dashboard" component={VerificationDashboardRoute} />
       <Stack.Screen name="PendingBloodRequests" component={PendingBloodRequestsScreen} />
       <Stack.Screen name="RequestVerification" component={RequestVerificationScreen} />
+      <Stack.Screen name="MatchingDonors" component={MatchingDonorsScreen} />
     </Stack.Navigator>
   );
 }

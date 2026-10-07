@@ -4,4 +4,7 @@ export type VerificationMatchingStackParamList = {
   RequestVerification: {
     requestId: string;
   };
+  MatchingDonors: {
+    requestId: string;
+  };
 };
