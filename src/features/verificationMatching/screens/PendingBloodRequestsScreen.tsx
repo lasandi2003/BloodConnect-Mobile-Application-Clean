@@ -105,11 +105,46 @@ function PendingRequestsContent() {
           </View>
         </View>
 
-        <View style={styles.pageHeading}>
-          <Text style={styles.title}>Pending requests</Text>
-          <Text style={styles.subtitle}>
-            {requests.length} {requests.length === 1 ? 'request needs' : 'requests need'} your attention
-          </Text>
+        <ScrollView
+          style={styles.bodyScroll}
+          contentContainerStyle={styles.bodyContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={(
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void loadRequests(true)}
+              tintColor={COLORS.primary}
+            />
+          )}
+        >
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryTop}>
+            <View style={styles.summaryCopy}>
+              <Text style={styles.summaryTitle}>Pending requests</Text>
+              <Text style={styles.summarySubtitle}>
+                {requests.length} {requests.length === 1 ? 'request needs' : 'requests need'} your attention
+              </Text>
+            </View>
+            <View style={styles.totalBadge}>
+              <Text style={styles.totalBadgeNumber}>{loading ? '—' : requests.length}</Text>
+              <Text style={styles.totalBadgeLabel}>pending</Text>
+            </View>
+          </View>
+          <View style={styles.summaryStatuses}>
+            {([
+              { label: 'Critical', color: '#A8071A' },
+              { label: 'Urgent', color: '#B86E00' },
+              { label: 'Normal', color: '#20824F' },
+            ] as const).map(item => {
+              const count = requests.filter(request => request.urgency === item.label.toLowerCase()).length;
+              return (
+                <View key={item.label} style={styles.summaryStatus}>
+                  <View style={styles.summaryStatusDot} />
+                  <Text style={styles.summaryStatusText}>{loading ? '—' : count} {item.label}</Text>
+                </View>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.controls}>
@@ -150,6 +185,7 @@ function PendingRequestsContent() {
 
         <ScrollView
           horizontal
+          style={styles.bloodGroupScroll}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.bloodGroupFilters}
         >
@@ -172,40 +208,25 @@ function PendingRequestsContent() {
           })}
         </ScrollView>
 
-        {!loading && !errorMessage && filteredRequests.length > 0 ? (
-          <View style={styles.urgencySummary}>
-            {([
-              { label: 'Critical', color: '#A8071A' },
-              { label: 'Urgent', color: '#B86E00' },
-              { label: 'Normal', color: COLORS.success },
-            ] as const).map(item => {
-              const count = filteredRequests.filter(
-                request => request.urgency === item.label.toLowerCase(),
-              ).length;
-
-              return count > 0 ? (
-                <View key={item.label} style={styles.urgencyPill}>
-                  <View style={[styles.urgencyDot, { backgroundColor: item.color }]} />
-                  <Text style={[styles.urgencyText, { color: item.color }]}>
-                    {count} {item.label}
-                  </Text>
-                </View>
-              ) : null;
-            })}
+        <View style={styles.statusSummaryRow}>
+          <View style={[styles.statusSummaryPill, styles.statusSummaryActive]}>
+            <Text style={styles.statusSummaryActiveText}>All {loading ? '—' : filteredRequests.length}</Text>
           </View>
-        ) : null}
+          {([
+            { label: 'Critical', color: '#A8071A' },
+            { label: 'Urgent', color: '#B86E00' },
+            { label: 'Normal', color: '#20824F' },
+          ] as const).map(item => {
+            const count = filteredRequests.filter(request => request.urgency === item.label.toLowerCase()).length;
+            return (
+              <View key={item.label} style={styles.statusSummaryPill}>
+                <View style={[styles.statusSummaryDot, { backgroundColor: item.color }]} />
+                <Text style={[styles.statusSummaryText, { color: item.color }]}>{loading ? '—' : count} {item.label}</Text>
+              </View>
+            );
+          })}
+        </View>
 
-        <ScrollView
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={(
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void loadRequests(true)}
-              tintColor={COLORS.primary}
-            />
-          )}
-        >
           {loading ? (
             <View style={styles.stateCard}>
               <ActivityIndicator size="large" color={COLORS.primary} />
@@ -254,6 +275,11 @@ function PendingRequestsContent() {
                   )}
                 />
               ))}
+              <View style={styles.endMessage}>
+                <Ionicons name="checkmark-circle-outline" size={22} color={COLORS.success} />
+                <Text style={styles.endMessageTitle}>You're all caught up</Text>
+                <Text style={styles.endMessageText}>New requests will appear here automatically.</Text>
+              </View>
             </>
           )}
         </ScrollView>
@@ -356,23 +382,32 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  pageHeading: {
-    paddingHorizontal: 18,
-    paddingTop: 8,
-    paddingBottom: 5,
+  summaryCard: {
+    marginHorizontal: -2,
+    marginTop: 4,
+    marginBottom: 9,
+    padding: 13,
+    borderRadius: 16,
+    backgroundColor: '#C8102E',
+    shadowColor: '#C8102E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  title: {
-    color: COLORS.text,
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  subtitle: {
-    marginTop: 2,
-    color: COLORS.textSecondary,
-    fontSize: 9,
-  },
+  summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  summaryCopy: { flex: 1, minWidth: 0 },
+  summaryTitle: { color: COLORS.white, fontSize: 16, fontWeight: '800' },
+  summarySubtitle: { marginTop: 3, color: '#FFE3E7', fontSize: 10 },
+  totalBadge: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.white },
+  totalBadgeNumber: { color: COLORS.primary, fontSize: 17, lineHeight: 19, fontWeight: '800' },
+  totalBadgeLabel: { color: COLORS.primary, fontSize: 7, fontWeight: '700' },
+  summaryStatuses: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  summaryStatus: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  summaryStatusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: COLORS.white },
+  summaryStatusText: { color: COLORS.white, fontSize: 8, fontWeight: '600' },
   controls: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingTop: 4,
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,12 +442,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bloodGroupFilters: {
-    height: 49,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingTop: 9,
     paddingBottom: 7,
     gap: 8,
     alignItems: 'center',
+  },
+  bloodGroupScroll: {
+    height: 49,
+    flexGrow: 0,
+    flexShrink: 0,
   },
   filterChip: {
     minWidth: 34,
@@ -440,36 +479,39 @@ const styles = StyleSheet.create({
   activeFilterChipText: {
     color: COLORS.white,
   },
-  urgencySummary: {
-    paddingHorizontal: 17,
+  statusSummaryRow: {
+    paddingHorizontal: 0,
+    paddingTop: 3,
     paddingBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
+    gap: 5,
   },
-  urgencyPill: {
-    paddingHorizontal: 8,
+  statusSummaryPill: {
+    minHeight: 25,
+    paddingHorizontal: 7,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 13,
     backgroundColor: COLORS.white,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    borderWidth: 1,
+    borderColor: '#F2E0E3',
   },
-  urgencyDot: {
+  statusSummaryActive: { backgroundColor: '#C8102E', borderColor: '#C8102E' },
+  statusSummaryText: { fontSize: 8, fontWeight: '700' },
+  statusSummaryActiveText: { color: COLORS.white, fontSize: 8, fontWeight: '700' },
+  statusSummaryDot: {
     width: 5,
     height: 5,
     borderRadius: 3,
   },
-  urgencyText: {
-    fontSize: 8,
-    fontWeight: '700',
-  },
-  listContent: {
+  bodyScroll: {
     flex: 1,
-    flexGrow: 1,
+  },
+  bodyContent: {
     paddingHorizontal: 16,
-    paddingTop: 4,
     paddingBottom: 82,
   },
   createRequestButton: {
@@ -540,4 +582,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  endMessage: {
+    marginTop: 4,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#E9B8C0',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFF9FA',
+  },
+  endMessageTitle: { color: COLORS.text, fontSize: 11, fontWeight: '700' },
+  endMessageText: { color: COLORS.textSecondary, fontSize: 9, textAlign: 'center' },
 });

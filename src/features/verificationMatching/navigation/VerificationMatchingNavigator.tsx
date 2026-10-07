@@ -17,10 +17,17 @@ type Navigation = NativeStackNavigationProp<VerificationMatchingStackParamList>;
 function VerificationDashboardRoute() {
   const navigation = useNavigation<Navigation>();
   const openPendingRequests = () => navigation.navigate('PendingBloodRequests');
+  const openRequestVerification = (requestId: string) =>
+    navigation.navigate('RequestVerification', { requestId });
 
   return (
     <RoleAppShell
-      home={<HealthcareDashboardScreen onOpenPendingRequests={openPendingRequests} />}
+      home={(
+        <HealthcareDashboardScreen
+          onOpenPendingRequests={openPendingRequests}
+          onOpenRequestVerification={openRequestVerification}
+        />
+      )}
       activity={{
         title: 'Pending Requests',
         description: 'Requests waiting for healthcare verification will be shown here.',

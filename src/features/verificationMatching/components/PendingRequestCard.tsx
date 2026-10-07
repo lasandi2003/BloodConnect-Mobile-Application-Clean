@@ -17,30 +17,6 @@ interface Props {
   onPress: () => void;
 }
 
-function formatRequestAge(request: EmergencyRequest): string | null {
-  const createdAt = request.createdAt as
-    | { toMillis?: () => number }
-    | string
-    | null
-    | undefined;
-  const timestamp = typeof createdAt === 'string'
-    ? Date.parse(createdAt)
-    : createdAt?.toMillis?.();
-
-  if (!timestamp || Number.isNaN(timestamp)) {
-    return null;
-  }
-
-  const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60_000));
-  if (minutes < 1) return 'Just now';
-  if (minutes < 60) return `${minutes} min ago`;
-
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} hr ago`;
-
-  return `${Math.floor(hours / 24)} days ago`;
-}
-
 export default function PendingRequestCard({ request, onPress }: Props) {
   const urgencyStyle = request.urgency === 'critical'
     ? styles.criticalBadge
@@ -53,7 +29,6 @@ export default function PendingRequestCard({ request, onPress }: Props) {
     : request.urgency === 'urgent'
       ? styles.urgentText
       : styles.normalText;
-  const requestAge = formatRequestAge(request);
 
   return (
     <View style={styles.card}>
@@ -83,31 +58,22 @@ export default function PendingRequestCard({ request, onPress }: Props) {
           </View>
         </View>
 
-        <View style={styles.metadataRow}>
-          <View style={styles.metadataPill}>
-            <Ionicons name="water-outline" size={11} color={COLORS.primary} />
-            <Text style={styles.metadataText}>
-              {request.unitsRequired} {request.unitsRequired === 1 ? 'unit' : 'units'}
-            </Text>
+        <View style={styles.infoRows}>
+          <View style={styles.infoRow}>
+            <Ionicons name="water-outline" size={12} color={COLORS.primary} />
+            <Text style={styles.infoLabel}>Units required</Text>
+            <Text style={styles.infoValue}>{request.unitsRequired} {request.unitsRequired === 1 ? 'unit' : 'units'}</Text>
           </View>
-          <View style={styles.metadataPill}>
-            <Ionicons name="business-outline" size={11} color={COLORS.textMuted} />
-            <Text style={styles.metadataText} numberOfLines={1}>
-              {request.hospitalName}
-            </Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="business-outline" size={12} color={COLORS.textMuted} />
+            <Text style={styles.infoLabel}>Hospital</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{request.hospitalName}</Text>
           </View>
-          <View style={styles.metadataPill}>
-            <Ionicons name="calendar-outline" size={11} color={COLORS.textMuted} />
-            <Text style={styles.metadataText} numberOfLines={1}>
-              {request.requiredDate}
-            </Text>
+          <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={12} color={COLORS.textMuted} />
+            <Text style={styles.infoLabel}>Needed by</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{request.requiredDate}</Text>
           </View>
-          {requestAge ? (
-            <View style={styles.metadataPill}>
-              <Ionicons name="time-outline" size={11} color={COLORS.textMuted} />
-              <Text style={styles.metadataText}>{requestAge}</Text>
-            </View>
-          ) : null}
         </View>
       </Pressable>
 
@@ -193,26 +159,26 @@ const styles = StyleSheet.create({
   urgentText: { color: '#A96800' },
   normalBadge: { backgroundColor: '#E8F7EF' },
   normalText: { color: COLORS.success },
-  metadataRow: {
+  infoRows: {
     marginTop: 7,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 5,
   },
-  metadataPill: {
-    maxWidth: '100%',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 8,
-    backgroundColor: '#F8F5F5',
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 6,
   },
-  metadataText: {
-    maxWidth: 145,
+  infoLabel: {
+    flex: 0.9,
     color: COLORS.textSecondary,
     fontSize: 8,
+  },
+  infoValue: {
+    flex: 1.1,
+    color: COLORS.textSecondary,
+    fontSize: 8,
+    fontWeight: '600',
+    textAlign: 'right',
   },
   actions: {
     marginTop: 8,

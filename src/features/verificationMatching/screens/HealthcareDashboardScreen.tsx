@@ -239,13 +239,20 @@ function urgencyStyle(request: EmergencyRequest) {
   return { label: 'Normal', chip: styles.normalChip, text: styles.normalText };
 }
 
-function RequestCard({ request }: { request: EmergencyRequest }) {
+function RequestCard({
+  request,
+  onPress,
+}: {
+  request: EmergencyRequest;
+  onPress: (requestId: string) => void;
+}) {
   const urgency = urgencyStyle(request);
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`View ${request.patientName} request details`}
+      onPress={() => onPress(request.id)}
       style={({ pressed }) => [styles.requestCard, pressed && styles.pressedCard]}
     >
       <View style={styles.bloodBadge}>
@@ -269,8 +276,10 @@ function RequestCard({ request }: { request: EmergencyRequest }) {
 
 export default function HealthcareDashboardScreen({
   onOpenPendingRequests,
+  onOpenRequestVerification,
 }: {
   onOpenPendingRequests: () => void;
+  onOpenRequestVerification: (requestId: string) => void;
 }) {
   const { profile, logout } = useAuth();
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
@@ -479,7 +488,11 @@ export default function HealthcareDashboardScreen({
         ) : (
           <View style={styles.requestList}>
             {summary.recentRequests.slice(0, 3).map(request => (
-              <RequestCard key={request.id} request={request} />
+              <RequestCard
+                key={request.id}
+                request={request}
+                onPress={onOpenRequestVerification}
+              />
             ))}
           </View>
         )}

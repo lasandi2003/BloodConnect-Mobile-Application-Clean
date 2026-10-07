@@ -55,8 +55,12 @@ function asText(value: unknown, fallback = ''): string {
 function asUrgency(value: unknown): RequestUrgency {
   const urgency = asText(value).toLowerCase();
 
-  if (urgency === 'critical' || urgency === 'urgent') {
-    return urgency;
+  if (urgency === 'critical') {
+    return 'critical';
+  }
+
+  if (urgency === 'urgent' || urgency === 'high') {
+    return 'urgent';
   }
 
   return 'normal';
