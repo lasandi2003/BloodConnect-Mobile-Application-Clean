@@ -43,3 +43,13 @@ export interface EmergencyRequestDraft {
   requiredDate: string; // Local calendar date, YYYY-MM-DD; no time-zone conversion.
   urgencyLevel: UrgencyLevel;
 }
+
+export interface SubmittedRequestReceipt {
+  requestId: string;
+  bloodGroup: BloodGroup;
+  unitsRequired: number;
+  hospitalName: string;
+  requiredDate: string;
+  urgencyLevel: UrgencyLevel;
+  status: string;
+}

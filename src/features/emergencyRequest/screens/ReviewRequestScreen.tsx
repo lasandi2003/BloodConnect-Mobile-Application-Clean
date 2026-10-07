@@ -1,26 +1,65 @@
-import React, { useState, type ComponentProps } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState, type ComponentProps } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { usePreventRemove } from '@react-navigation/native';
 
 import { COLORS } from '../../../constants/colors';
 import RequestProgress from '../components/RequestProgress';
 import { useEmergencyRequestDraft } from '../context/EmergencyRequestDraftContext';
 import type { RequesterStackParamList } from '../navigation/types';
 import { formatDisplayDate } from '../utils/hospitalValidation';
+import { useAuth } from '../../auth/context/AuthContext';
+import { createEmergencyRequestId, getSubmissionErrorMessage, submitEmergencyRequest } from '../services/emergencyRequestService';
 
 type Props = NativeStackScreenProps<RequesterStackParamList, 'ReviewRequest'>;
 
 export default function ReviewRequestScreen({ navigation }: Props) {
-  const { preparedDraft } = useEmergencyRequestDraft();
+  const { preparedDraft, submissionId, setSubmissionId, submittedRequest, completeSubmission } = useEmergencyRequestDraft();
+  const { user, profile } = useAuth();
   const [detailsConfirmed, setDetailsConfirmed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
+  const submissionLock = useRef(false);
+
+  usePreventRemove(isSubmitting && !submittedRequest, () => {
+    setSubmissionError('Submission is in progress. Please wait for confirmation.');
+  });
+
+  useEffect(() => {
+    if (submittedRequest) navigation.replace('RequestSubmitted', { receipt: submittedRequest });
+  }, [submittedRequest, navigation]);
+
+  async function handleSubmit() {
+    if (!preparedDraft || !detailsConfirmed || submissionLock.current) return;
+    if (!user || profile?.role !== 'requester' || profile.status !== 'active') {
+      setSubmissionError('Please sign in with an active requester account before submitting.');
+      return;
+    }
+    submissionLock.current = true;
+    setIsSubmitting(true);
+    setSubmissionError('');
+    try {
+      const requestId = submissionId ?? createEmergencyRequestId();
+      if (!submissionId) setSubmissionId(requestId);
+      const receipt = await submitEmergencyRequest(preparedDraft, user.uid, requestId);
+      completeSubmission(receipt);
+    } catch (error) {
+      setSubmissionError(getSubmissionErrorMessage(error));
+    } finally {
+      submissionLock.current = false;
+      setIsSubmitting(false);
+    }
+  }
 
   function editPatient() {
+    if (submissionLock.current) return;
     navigation.popTo('PatientInformation');
   }
 
   function editHospital() {
+    if (submissionLock.current) return;
     navigation.goBack();
   }
 
@@ -45,7 +84,7 @@ export default function ReviewRequestScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={editHospital} accessibilityRole="button" accessibilityLabel="Back to hospital details">
+        <Pressable style={styles.backButton} onPress={editHospital} disabled={isSubmitting} accessibilityRole="button" accessibilityLabel="Back to hospital details">
           <Ionicons name="chevron-back" size={22} color={COLORS.text} />
         </Pressable>
         <Text style={styles.headerTitle}>Emergency Blood Request</Text>
@@ -84,31 +123,32 @@ export default function ReviewRequestScreen({ navigation }: Props) {
           </View>
         </View>
 
-        <ReviewSection title="Patient Information" icon="person-outline" editLabel="Edit Patient" onEdit={editPatient} rows={[
+        <ReviewSection title="Patient Information" icon="person-outline" editLabel="Edit Patient" disabled={isSubmitting} onEdit={editPatient} rows={[
           { label: 'Full name', value: patient.fullName },
           { label: 'Age', value: `${patient.age} years` },
           { label: 'Gender', value: patient.gender },
           { label: 'Contact number', value: patient.contactNumber },
         ]} />
-        <ReviewSection title="Representative Details" icon="people-outline" editLabel="Edit Patient" onEdit={editPatient} rows={[
+        <ReviewSection title="Representative Details" icon="people-outline" editLabel="Edit Patient" disabled={isSubmitting} onEdit={editPatient} rows={[
           { label: 'Name', value: patient.representativeName },
           { label: 'Contact number', value: patient.representativeContactNumber },
           { label: 'Relationship', value: patient.relationshipToPatient },
         ]} />
-        <ReviewSection title="Blood Requirement" icon="water-outline" editLabel="Edit Hospital" onEdit={editHospital} rows={[
+        <ReviewSection title="Blood Requirement" icon="water-outline" editLabel="Edit Hospital" disabled={isSubmitting} onEdit={editHospital} rows={[
           { label: 'Blood group', value: bloodRequirement.bloodGroup },
           { label: 'Units required', value: String(bloodRequirement.unitsRequired) },
         ]} />
-        <ReviewSection title="Hospital Information" icon="business-outline" editLabel="Edit Hospital" onEdit={editHospital} rows={[
+        <ReviewSection title="Hospital Information" icon="business-outline" editLabel="Edit Hospital" disabled={isSubmitting} onEdit={editHospital} rows={[
           { label: 'Hospital name', value: hospital.hospitalName },
           { label: 'Location', value: hospital.hospitalLocation },
         ]} />
-        <ReviewSection title="Request Information" icon="calendar-outline" editLabel="Edit Hospital" onEdit={editHospital} rows={[
+        <ReviewSection title="Request Information" icon="calendar-outline" editLabel="Edit Hospital" disabled={isSubmitting} onEdit={editHospital} rows={[
           { label: 'Required date', value: readableDate },
           { label: 'Urgency level', value: urgencyLevel },
         ]} />
 
         <Pressable style={styles.confirmation} onPress={() => setDetailsConfirmed(previous => !previous)}
+          disabled={isSubmitting}
           accessibilityRole="checkbox" accessibilityState={{ checked: detailsConfirmed }}
           accessibilityLabel="I confirm these details are correct">
           <View style={[styles.checkbox, detailsConfirmed && styles.checkedBox]}>
@@ -121,17 +161,20 @@ export default function ReviewRequestScreen({ navigation }: Props) {
           <Ionicons name="information-circle-outline" size={21} color={COLORS.primary} />
           <View style={styles.noticeContent}>
             <Text style={styles.noticeTitle}>Unsaved draft</Text>
-            <Text style={styles.noticeText}>Refreshing, closing the app or discarding this request will clear your details. Submission is coming soon; nothing has been submitted.</Text>
+            <Text style={styles.noticeText}>Your details are not saved until submission succeeds. Refreshing, closing the app or discarding this draft will clear it.</Text>
           </View>
         </View>
+        {submissionError ? <Text style={styles.submissionError} accessibilityRole="alert" accessibilityLiveRegion="polite">{submissionError}</Text> : null}
+        {!detailsConfirmed ? <Text style={styles.confirmationHint}>Confirm the details above to enable submission.</Text> : null}
         <View style={styles.actions}>
-          <Pressable style={styles.secondaryButton} onPress={editHospital} accessibilityRole="button">
+          <Pressable style={styles.secondaryButton} onPress={editHospital} disabled={isSubmitting} accessibilityRole="button">
             <Text style={styles.secondaryText}>Back</Text>
           </Pressable>
-          <Pressable style={[styles.primaryButton, styles.disabledSubmit]} disabled accessibilityRole="button"
-            accessibilityState={{ disabled: true }} accessibilityLabel="Submit Request, coming soon">
-            <Text style={styles.disabledSubmitText}>Submit Request</Text>
-            <Text style={styles.comingSoonText}>Coming soon</Text>
+          <Pressable style={[styles.primaryButton, (!detailsConfirmed || isSubmitting) && styles.disabledSubmit]}
+            onPress={handleSubmit} disabled={!detailsConfirmed || isSubmitting} accessibilityRole="button"
+            accessibilityState={{ disabled: !detailsConfirmed || isSubmitting, busy: isSubmitting }} accessibilityLabel="Submit Request">
+            {isSubmitting ? <ActivityIndicator size="small" color={COLORS.textSecondary} /> : null}
+            <Text style={isSubmitting || !detailsConfirmed ? styles.disabledSubmitText : styles.primaryText}>{isSubmitting ? 'Submitting...' : 'Submit Request'}</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -144,16 +187,17 @@ interface ReviewSectionProps {
   icon: ComponentProps<typeof Ionicons>['name'];
   rows: { label: string; value: string }[];
   editLabel: string;
+  disabled?: boolean;
   onEdit: () => void;
 }
 
-function ReviewSection({ title, icon, rows, editLabel, onEdit }: ReviewSectionProps) {
+function ReviewSection({ title, icon, rows, editLabel, onEdit, disabled }: ReviewSectionProps) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.cardIcon}><Ionicons name={icon} size={18} color={COLORS.primary} /></View>
         <Text style={styles.cardTitle}>{title}</Text>
-        <Pressable style={styles.editButton} onPress={onEdit} accessibilityRole="button" accessibilityLabel={`${editLabel}: ${title}`}>
+        <Pressable style={styles.editButton} onPress={onEdit} disabled={disabled} accessibilityRole="button" accessibilityLabel={`${editLabel}: ${title}`}>
           <Ionicons name="create-outline" size={16} color={COLORS.primary} />
           <Text style={styles.editText}>{editLabel}</Text>
         </Pressable>
@@ -220,7 +264,8 @@ const styles = StyleSheet.create({
   primaryText: { fontSize: 14, fontWeight: '700', color: COLORS.white, textAlign: 'center' },
   disabledSubmit: { backgroundColor: COLORS.border, paddingVertical: 10 },
   disabledSubmitText: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary },
-  comingSoonText: { fontSize: 11, color: COLORS.textSecondary, marginTop: 4 },
+  submissionError: { fontSize: 13, lineHeight: 20, color: COLORS.danger, marginBottom: 14 },
+  confirmationHint: { fontSize: 12, lineHeight: 18, color: COLORS.textSecondary, marginBottom: 10 },
   emptyState: { flex: 1, justifyContent: 'center', padding: 24, gap: 14 },
   emptyButton: { flex: 0 },
 });

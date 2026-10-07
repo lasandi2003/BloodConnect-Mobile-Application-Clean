@@ -1,0 +1,181 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const ts = require('typescript');
+
+function draft() {
+  const date = new Date();
+  date.setDate(date.getDate() + 3);
+  return {
+    patient: { fullName: 'Example Patient', age: 30, gender: 'Female', contactNumber: '0771234567',
+      representativeName: 'Example Representative', representativeContactNumber: '0772345678', relationshipToPatient: 'Sibling' },
+    hospital: { hospitalName: 'Example Hospital', hospitalLocation: 'Colombo' },
+    bloodRequirement: { bloodGroup: 'O+', unitsRequired: 2 },
+    requiredDate: [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-'),
+    urgencyLevel: 'Urgent',
+  };
+}
+
+// Load only this service and its pure utilities. All Firebase operations are mocked.
+function setup() {
+  const records = new Map();
+  const state = { writes: 0, transactions: 0, failBeforeCommit: false, failAfterCommit: false };
+  const auth = { currentUser: { uid: 'requester-user' } };
+  const firestore = {
+    collection: (_db, name) => ({ name }),
+    doc: (reference, name, id) => id ? { id, path: `${name}/${id}` } : { id: 'generated-test-id', path: `${reference.name}/generated-test-id` },
+    serverTimestamp: () => ({ serverTimestamp: true }),
+    runTransaction: async (_db, callback) => {
+      state.transactions++;
+      const pending = [];
+      const receipt = await callback({
+        get: async reference => ({ exists: () => records.has(reference.path), data: () => records.get(reference.path) }),
+        set: (reference, data) => pending.push([reference.path, data]),
+      });
+      if (state.failBeforeCommit) {
+        state.failBeforeCommit = false;
+        throw Object.assign(new Error('Unavailable'), { code: 'unavailable' });
+      }
+      for (const [key, data] of pending) { records.set(key, data); state.writes++; }
+      if (state.failAfterCommit) {
+        state.failAfterCommit = false;
+        throw Object.assign(new Error('Acknowledgement lost'), { code: 'unavailable' });
+      }
+      return receipt;
+    },
+  };
+  const cache = new Map();
+  function load(filename) {
+    if (cache.has(filename)) return cache.get(filename).exports;
+    const module = { exports: {} };
+    cache.set(filename, module);
+    const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+    }).outputText;
+    function localRequire(request) {
+      if (request === 'firebase/firestore') return firestore;
+      if (request.endsWith('config/firebase')) return { auth, db: {} };
+      if (request.startsWith('.')) return load(path.resolve(path.dirname(filename), `${request}.ts`));
+      throw new Error(`Unexpected dependency: ${request}`);
+    }
+    new Function('require', 'module', 'exports', compiled)(localRequire, module, module.exports);
+    return module.exports;
+  }
+  return { service: load(path.resolve(__dirname, '../emergencyRequestService.ts')), records, state, auth };
+}
+
+test('generating a request ID performs no save', () => {
+  const { service, state } = setup();
+  assert.equal(service.createEmergencyRequestId(), 'generated-test-id');
+  assert.equal(state.transactions, 0);
+  assert.equal(state.writes, 0);
+});
+
+test('submission writes donor-compatible fields and an unverified pending status', async () => {
+  const { service, state, records } = setup();
+  const receipt = await service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  const saved = records.get('emergencyRequests/request-1');
+  assert.equal(state.writes, 1);
+  assert.equal(saved.requesterId, 'requester-user');
+  assert.equal(saved.patientName, 'Example Patient');
+  assert.equal(saved.patient.age, 30);
+  assert.equal(saved.hospitalName, 'Example Hospital');
+  assert.equal(saved.location, 'Colombo');
+  assert.equal(saved.bloodGroup, 'O+');
+  assert.equal(saved.unitsRequired, 2);
+  assert.equal(saved.urgency, 'urgent');
+  assert.equal(saved.contactName, 'Example Representative');
+  assert.equal(saved.contactPhone, '0772345678');
+  assert.equal(saved.verified, false);
+  assert.equal(saved.status, 'pending_verification');
+  assert.deepEqual(saved.createdAt, { serverTimestamp: true });
+  assert.deepEqual(saved.updatedAt, { serverTimestamp: true });
+  assert.equal(receipt.requestId, 'request-1');
+  assert.equal(receipt.status, 'pending_verification');
+});
+
+test('retrying the same ID returns the saved record without overwriting it', async () => {
+  const { service, state, records } = setup();
+  await service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  const edited = draft();
+  edited.hospital.hospitalName = 'Changed Hospital';
+  const receipt = await service.submitEmergencyRequest(edited, 'requester-user', 'request-1');
+  assert.equal(state.writes, 1);
+  assert.equal(records.size, 1);
+  assert.equal(receipt.hospitalName, 'Example Hospital');
+});
+
+test('a failed commit rejects; retrying safely creates one request', async () => {
+  const { service, state, records } = setup();
+  state.failBeforeCommit = true;
+  await assert.rejects(service.submitEmergencyRequest(draft(), 'requester-user', 'request-1'));
+  assert.equal(records.size, 0);
+  await service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  assert.equal(state.writes, 1);
+});
+
+test('lost save acknowledgement is recovered without a duplicate write', async () => {
+  const { service, state, records } = setup();
+  state.failAfterCommit = true;
+  await assert.rejects(service.submitEmergencyRequest(draft(), 'requester-user', 'request-1'));
+  assert.equal(records.size, 1);
+  const receipt = await service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  assert.equal(receipt.requestId, 'request-1');
+  assert.equal(state.writes, 1);
+});
+
+test('a changed session cannot create a request', async () => {
+  const { service, state, auth } = setup();
+  auth.currentUser = { uid: 'other-user' };
+  await assert.rejects(service.submitEmergencyRequest(draft(), 'requester-user', 'request-1'), /session has changed/);
+  assert.equal(state.transactions, 0);
+  assert.equal(state.writes, 0);
+});
+
+test('an existing request belonging to another user cannot be overwritten', async () => {
+  const { service, state, records } = setup();
+  records.set('emergencyRequests/request-1', { requesterId: 'other-user' });
+  await assert.rejects(service.submitEmergencyRequest(draft(), 'requester-user', 'request-1'), /unavailable/);
+  assert.equal(state.writes, 0);
+});
+
+test('submission revalidates dates and patient data before any save', async () => {
+  const { service, state } = setup();
+  const expired = draft();
+  expired.requiredDate = '2000-01-01';
+  await assert.rejects(service.submitEmergencyRequest(expired, 'requester-user', 'request-1'), /future date/);
+  const invalid = draft();
+  invalid.patient.age = 121;
+  await assert.rejects(service.submitEmergencyRequest(invalid, 'requester-user', 'request-2'), /age/);
+  assert.equal(state.writes, 0);
+});
+
+test('a retry recovers an existing receipt even if the original required date has passed', async () => {
+  const { service, state, records } = setup();
+  await service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  records.get('emergencyRequests/request-1').requiredDate = '2000-01-01';
+  const expired = draft();
+  expired.requiredDate = '2000-01-01';
+  const receipt = await service.submitEmergencyRequest(expired, 'requester-user', 'request-1');
+  assert.equal(receipt.requiredDate, '2000-01-01');
+  assert.equal(state.writes, 1);
+});
+
+test('a malformed existing record cannot produce a success receipt', async () => {
+  const { service, state, records } = setup();
+  records.set('emergencyRequests/request-1', { requesterId: 'requester-user' });
+  await assert.rejects(service.submitEmergencyRequest(draft(), 'requester-user', 'request-1'), /could not be loaded/);
+  assert.equal(state.writes, 0);
+});
+
+test('a recovered receipt reports the saved status rather than resetting verification', async () => {
+  const { service, state, records } = setup();
+  await service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  records.get('emergencyRequests/request-1').status = 'verified';
+  records.get('emergencyRequests/request-1').verified = true;
+  const receipt = await service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  assert.equal(receipt.status, 'verified');
+  assert.equal(records.get('emergencyRequests/request-1').verified, true);
+  assert.equal(state.writes, 1);
+});

@@ -6,6 +6,7 @@ import RequesterDashboardScreen from '../screens/RequesterDashboardScreen';
 import PatientInformationScreen from '../screens/PatientInformationScreen';
 import HospitalDetailsScreen from '../screens/HospitalDetailsScreen';
 import ReviewRequestScreen from '../screens/ReviewRequestScreen';
+import RequestSubmittedScreen from '../screens/RequestSubmittedScreen';
 import { EmergencyRequestDraftProvider, useEmergencyRequestDraft } from '../context/EmergencyRequestDraftContext';
 import type { RequesterStackParamList } from './types';
 
@@ -54,6 +55,7 @@ export default function RequesterNavigator() {
         <Stack.Screen name="PatientInformation" component={PatientInformationScreen} />
         <Stack.Screen name="HospitalDetails" component={HospitalDetailsScreen} />
         <Stack.Screen name="ReviewRequest" component={ReviewRequestScreen} />
+        <Stack.Screen name="RequestSubmitted" component={RequestSubmittedScreen} options={{ gestureEnabled: false }} />
       </Stack.Navigator>
     </EmergencyRequestDraftProvider>
   );
