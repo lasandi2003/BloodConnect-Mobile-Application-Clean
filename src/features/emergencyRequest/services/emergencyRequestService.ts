@@ -1,6 +1,6 @@
-import { collection, doc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, onSnapshot, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../../config/firebase';
-import type { EmergencyRequestDraft, SubmittedRequestReceipt } from '../types/emergencyRequest';
+import type { EmergencyRequestDraft, RequestStatusDetails, SubmittedRequestReceipt } from '../types/emergencyRequest';
 import { buildRequestRecord, buildSubmissionReceipt } from '../utils/submissionData';
 
 const REQUESTS_COLLECTION = 'emergencyRequests';
@@ -37,4 +37,37 @@ export function getSubmissionErrorMessage(error: unknown) {
   if (code === 'permission-denied') return 'Your account does not have permission to submit requests. Please contact the project administrator.';
   if (code === 'unavailable' || code === 'deadline-exceeded') return 'Unable to confirm the save. Check your connection and retry; the same request ID will be reused.';
   return error instanceof Error ? error.message : 'Unable to submit the request. Please try again.';
+}
+
+export function watchEmergencyRequest(
+  requestId: string, requesterId: string,
+  onChange: (request: RequestStatusDetails | null, fromCache: boolean, hasPendingWrites: boolean) => void,
+  onError: (error: unknown) => void,
+) {
+  if (!requestId || auth.currentUser?.uid !== requesterId) {
+    onError(new Error('Please sign in again to view this request.'));
+    return () => {};
+  }
+  return onSnapshot(doc(db, REQUESTS_COLLECTION, requestId), { includeMetadataChanges: true }, snapshot => {
+    try {
+      if (auth.currentUser?.uid !== requesterId) throw new Error('Your session has changed. Please sign in again.');
+      if (!snapshot.exists()) {
+        onChange(null, snapshot.metadata.fromCache, snapshot.metadata.hasPendingWrites);
+        return;
+      }
+      const data = snapshot.data();
+      if (data.requesterId !== requesterId) throw new Error('This request does not belong to your account.');
+      const receipt = buildSubmissionReceipt(requestId, data as ReturnType<typeof buildRequestRecord>);
+      onChange({ ...receipt, verified: data.verified === true || data.isVerified === true,
+        location: typeof data.location === 'string' ? data.location : '' },
+      snapshot.metadata.fromCache, snapshot.metadata.hasPendingWrites);
+    } catch (error) { onError(error); }
+  }, onError);
+}
+
+export function getRequestStatusErrorMessage(error: unknown) {
+  const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+  if (code === 'permission-denied') return 'You do not have permission to view this request. Please contact the project administrator.';
+  if (code === 'unavailable') return 'Unable to connect. Please check your connection and retry.';
+  return error instanceof Error ? error.message : 'Unable to load the request status. Please retry.';
 }

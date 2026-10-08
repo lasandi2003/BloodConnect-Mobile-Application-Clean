@@ -52,10 +52,10 @@ export default function RequestSubmittedScreen({ navigation, route }: Props) {
 
         <View style={styles.notice}>
           <Ionicons name="information-circle-outline" size={21} color={COLORS.primary} />
-          <Text style={styles.noticeText}>Keep your request ID for reference. Live tracking will be available in the next step.</Text>
+          <Text style={styles.noticeText}>Keep your request ID for reference. Track Request shows the latest saved status.</Text>
         </View>
-        <Pressable style={styles.trackButton} disabled accessibilityRole="button" accessibilityState={{ disabled: true }}>
-          <Text style={styles.trackText}>Track Request · Coming soon</Text>
+        <Pressable style={styles.trackButton} onPress={() => navigation.navigate('RequestStatus', { requestId: receipt.requestId })} accessibilityRole="button">
+          <Text style={styles.trackText}>Track Request</Text>
         </Pressable>
         <Pressable style={styles.dashboardButton} onPress={returnToDashboard} accessibilityRole="button">
           <Text style={styles.dashboardText}>Back to Dashboard</Text>
@@ -89,8 +89,8 @@ const styles = StyleSheet.create({
   statusText: { flex: 1, fontSize: 13, fontWeight: '700', color: COLORS.primary },
   notice: { flexDirection: 'row', gap: 10, marginVertical: 20 },
   noticeText: { flex: 1, fontSize: 12, lineHeight: 19, color: COLORS.textSecondary },
-  trackButton: { minHeight: 52, borderRadius: 10, backgroundColor: COLORS.border, alignItems: 'center', justifyContent: 'center' },
-  trackText: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary },
+  trackButton: { minHeight: 52, borderRadius: 10, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  trackText: { fontSize: 14, fontWeight: '700', color: COLORS.white },
   dashboardButton: { minHeight: 52, borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary,
     marginTop: 12, alignItems: 'center', justifyContent: 'center' },
   dashboardText: { fontSize: 14, fontWeight: '700', color: COLORS.primary },

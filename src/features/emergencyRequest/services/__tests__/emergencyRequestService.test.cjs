@@ -23,6 +23,10 @@ function setup() {
   const state = { writes: 0, transactions: 0, failBeforeCommit: false, failAfterCommit: false };
   const auth = { currentUser: { uid: 'requester-user' } };
   const firestore = {
+    onSnapshot: (reference, options, next, error) => {
+      state.listener = { reference, options, next, error, closed: false };
+      return () => { state.listener.closed = true; };
+    },
     collection: (_db, name) => ({ name }),
     doc: (reference, name, id) => id ? { id, path: `${name}/${id}` } : { id: 'generated-test-id', path: `${reference.name}/generated-test-id` },
     serverTimestamp: () => ({ serverTimestamp: true }),
@@ -62,7 +66,8 @@ function setup() {
     new Function('require', 'module', 'exports', compiled)(localRequire, module, module.exports);
     return module.exports;
   }
-  return { service: load(path.resolve(__dirname, '../emergencyRequestService.ts')), records, state, auth };
+  return { service: load(path.resolve(__dirname, '../emergencyRequestService.ts')), records, state, auth,
+    statusView: load(path.resolve(__dirname, '../../utils/requestStatus.ts')).getRequestStatusView };
 }
 
 test('generating a request ID performs no save', () => {
@@ -178,4 +183,60 @@ test('a recovered receipt reports the saved status rather than resetting verific
   assert.equal(receipt.status, 'verified');
   assert.equal(records.get('emergencyRequests/request-1').verified, true);
   assert.equal(state.writes, 1);
+});
+
+test('status listener forwards live changes and cache metadata and can unsubscribe', async () => {
+  const { service, state, records } = setup();
+  await service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  const updates = [];
+  const unsubscribe = service.watchEmergencyRequest('request-1', 'requester-user', (...args) => updates.push(args), assert.fail);
+  const saved = records.get('emergencyRequests/request-1');
+  state.listener.next({ exists: () => true, data: () => saved, metadata: { fromCache: true, hasPendingWrites: false } });
+  assert.equal(updates[0][0].status, 'pending_verification');
+  assert.equal(updates[0][1], true);
+  saved.status = 'verified'; saved.verified = true;
+  state.listener.next({ exists: () => true, data: () => saved, metadata: { fromCache: false, hasPendingWrites: false } });
+  assert.equal(updates[1][0].verified, true);
+  assert.equal(updates[1][0].status, 'verified');
+  assert.equal(updates[1][1], false);
+  unsubscribe();
+  assert.equal(state.listener.closed, true);
+});
+
+test('a cached missing record is distinguished from a server-confirmed missing record', () => {
+  const { service, state } = setup();
+  const updates = [];
+  service.watchEmergencyRequest('missing', 'requester-user', (...args) => updates.push(args), assert.fail);
+  for (const fromCache of [true, false]) {
+    state.listener.next({ exists: () => false, metadata: { fromCache, hasPendingWrites: false } });
+  }
+  assert.deepEqual(updates, [[null, true, false], [null, false, false]]);
+});
+
+test('a listener never exposes a request belonging to another requester', () => {
+  const { service, state } = setup();
+  const failures = [];
+  service.watchEmergencyRequest('request-1', 'requester-user', () => assert.fail('Unexpected disclosure'), error => failures.push(error));
+  state.listener.next({ exists: () => true, data: () => ({ requesterId: 'other-user' }), metadata: { fromCache: false, hasPendingWrites: false } });
+  assert.match(failures[0].message, /does not belong/);
+});
+
+test('a changed session stops status data being exposed', () => {
+  const { service, state, auth } = setup();
+  const failures = [];
+  service.watchEmergencyRequest('request-1', 'requester-user', () => assert.fail('Unexpected disclosure'), error => failures.push(error));
+  auth.currentUser = { uid: 'other-user' };
+  state.listener.next({ exists: () => false, metadata: { fromCache: false, hasPendingWrites: false } });
+  assert.match(failures[0].message, /session has changed/);
+});
+
+test('progress uses saved states without inventing matches or completed donations', () => {
+  const { statusView } = setup();
+  assert.equal(statusView('pending_verification', false).stage, 1);
+  assert.equal(statusView('verified', true).stage, 2);
+  assert.equal(statusView('matched', true).stage, 3);
+  assert.equal(statusView('completed', true).stage, 4);
+  assert.equal(statusView('cancelled', true).stage, null);
+  assert.equal(statusView('cancelled', true).terminal, true);
+  assert.equal(statusView('unexpected_status', true).stage, null);
 });

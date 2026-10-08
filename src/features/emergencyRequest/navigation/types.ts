@@ -6,4 +6,5 @@ export type RequesterStackParamList = {
   HospitalDetails: { patient: PatientInformation };
   ReviewRequest: undefined;
   RequestSubmitted: { receipt: SubmittedRequestReceipt };
+  RequestStatus: { requestId: string };
 };

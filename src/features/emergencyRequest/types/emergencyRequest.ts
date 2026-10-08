@@ -53,3 +53,8 @@ export interface SubmittedRequestReceipt {
   urgencyLevel: UrgencyLevel;
   status: string;
 }
+
+export interface RequestStatusDetails extends SubmittedRequestReceipt {
+  verified: boolean;
+  location: string;
+}
