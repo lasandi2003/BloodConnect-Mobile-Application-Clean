@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -23,6 +24,8 @@ import { getDonorProfiles } from '../../donor/services/donorService';
 
 const EMERGENCY_REQUESTS = 'emergencyRequests';
 const DONOR_RESPONSES = 'donorResponses';
+const DONOR_PROFILES = 'donorProfiles';
+const DONOR_MATCHES = 'donorMatches';
 
 const CLOSED_STATUSES = new Set([
   'completed',
@@ -42,6 +45,30 @@ export interface VerificationDashboardSummary {
   matchedDonors: number | null;
   urgentRequests: number;
   recentRequests: EmergencyRequest[];
+}
+
+export interface MatchingHistoryRecord {
+  id: string;
+  requestId: string;
+  donorId: string;
+  patientName: string;
+  donorName: string;
+  bloodGroup: string;
+  unitsRequired?: number;
+  status: string;
+  createdAt: unknown;
+  updatedAt: unknown;
+}
+
+function logMatchingHistoryReadFailure(operation: string, error: unknown): void {
+  const details = error && typeof error === 'object'
+    ? error as { code?: unknown; message?: unknown }
+    : null;
+  console.error(`[MatchingHistory] Firestore read failed: ${operation}`, {
+    code: typeof details?.code === 'string' ? details.code : 'unknown',
+    message: typeof details?.message === 'string' ? details.message : String(error),
+    error,
+  });
 }
 
 function asText(value: unknown, fallback = ''): string {
@@ -211,6 +238,124 @@ export async function getVerificationRequestById(
     snapshot.id,
     snapshot.data() as Record<string, unknown>,
   );
+}
+
+/** Persist confirmed matches atomically and idempotently. */
+export async function confirmDonorMatches(
+  requestId: string,
+  donorIds: string[],
+): Promise<void> {
+  const uniqueDonorIds = [...new Set(donorIds.filter(Boolean))];
+  if (!requestId || uniqueDonorIds.length === 0) {
+    throw new Error('A request and at least one donor are required to confirm a match.');
+  }
+
+  const matchRefs = uniqueDonorIds.map(donorId => ({
+    donorId,
+    ref: doc(db, DONOR_MATCHES, `${requestId}_${donorId}`),
+  }));
+
+  await runTransaction(db, async transaction => {
+    const existingMatches = await Promise.all(
+      matchRefs.map(match => transaction.get(match.ref)),
+    );
+
+    existingMatches.forEach((snapshot, index) => {
+      if (snapshot.exists()) return;
+
+      const { donorId, ref } = matchRefs[index];
+      transaction.set(ref, {
+        requestId,
+        donorId,
+        status: 'matched',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    });
+  });
+}
+
+/** Build history from persisted healthcare-confirmed donor matches. */
+export async function getMatchingHistory(): Promise<MatchingHistoryRecord[]> {
+  let matchSnapshot;
+  try {
+    matchSnapshot = await getDocs(collection(db, DONOR_MATCHES));
+  } catch (error) {
+    logMatchingHistoryReadFailure(
+      `getDocs(collection(db, '${DONOR_MATCHES}'))`,
+      error,
+    );
+    throw error;
+  }
+  const matches = matchSnapshot.docs
+    .map(document => ({ id: document.id, data: document.data() }))
+    .filter(item =>
+      typeof item.data.requestId === 'string' &&
+      typeof item.data.donorId === 'string',
+    );
+
+  const requestIds = [...new Set(matches.map(item => item.data.requestId as string))];
+  const donorIds = [...new Set(matches.map(item => item.data.donorId as string))];
+
+  const [requestEntries, donorEntries] = await Promise.all([
+    Promise.all(requestIds.map(async id => {
+      try {
+        const snapshot = await getDoc(doc(db, EMERGENCY_REQUESTS, id));
+        return [id, snapshot.exists() ? snapshot.data() : null] as const;
+      } catch (error) {
+        logMatchingHistoryReadFailure(`getDoc(doc(db, '${EMERGENCY_REQUESTS}', '${id}'))`, error);
+        throw error;
+      }
+    })),
+    Promise.all(donorIds.map(async id => {
+      try {
+        const snapshot = await getDoc(doc(db, DONOR_PROFILES, id));
+        return [id, snapshot.exists() ? snapshot.data() : null] as const;
+      } catch (error) {
+        logMatchingHistoryReadFailure(`getDoc(doc(db, '${DONOR_PROFILES}', '${id}'))`, error);
+        throw error;
+      }
+    })),
+  ]);
+
+  const requestsById = new Map(requestEntries);
+  const donorsById = new Map(donorEntries);
+
+  return matches.map(({ id, data }) => {
+    const requestId = data.requestId as string;
+    const donorId = data.donorId as string;
+    const request = requestsById.get(requestId);
+    const snapshot = data.requestSnapshot && typeof data.requestSnapshot === 'object'
+      ? data.requestSnapshot as Record<string, unknown>
+      : {};
+    const patientName = request?.patientName ?? request?.patient ?? request?.name ?? snapshot.patientName;
+    const donorName = donorsById.get(donorId)?.fullName;
+    const rawUnits = request?.unitsRequired ?? request?.units ?? request?.quantity ?? snapshot.unitsRequired;
+    const unitsRequired = typeof rawUnits === 'number' && Number.isFinite(rawUnits)
+      ? rawUnits
+      : typeof rawUnits === 'string' && rawUnits.trim() && Number.isFinite(Number(rawUnits))
+        ? Number(rawUnits)
+        : undefined;
+
+    return {
+      id,
+      requestId,
+      donorId,
+      patientName: typeof patientName === 'string' && patientName.trim()
+        ? patientName.trim()
+        : 'Patient name unavailable',
+      donorName: typeof donorName === 'string' && donorName.trim()
+        ? donorName.trim()
+        : 'Donor name unavailable',
+      bloodGroup: String(
+        request?.bloodGroup ?? request?.requiredBloodGroup ?? snapshot.bloodGroup ?? '—',
+      ),
+      unitsRequired,
+      status: String(data.status ?? 'unknown').trim().toLowerCase(),
+      createdAt: data.createdAt ?? null,
+      updatedAt: data.updatedAt ?? data.createdAt ?? null,
+    };
+  });
 }
 
 export async function verifyRequest(requestId: string): Promise<void> {

@@ -20,7 +20,11 @@ import PlaceholderScreen from '../../../components/PlaceholderScreen';
 import RoleAppShell from '../../../components/RoleAppShell';
 import type { DonorProfile, EmergencyRequest } from '../../donor/types/donor';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
-import { getMatchingDonors, getVerificationRequestById } from '../services/verificationService';
+import {
+  confirmDonorMatches,
+  getMatchingDonors,
+  getVerificationRequestById,
+} from '../services/verificationService';
 
 type Props = NativeStackScreenProps<VerificationMatchingStackParamList, 'MatchingDonors'>;
 
@@ -178,6 +182,8 @@ function MatchingDonorsContent({ route, navigation }: Props) {
   const [donorsError, setDonorsError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedDonorIds, setSelectedDonorIds] = useState<string[]>([]);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [isSubmittingMatch, setIsSubmittingMatch] = useState(false);
   const requiredCount = request ? requiredDonorCount(request) : 0;
   const selectedDonorIdFromDetails = route.params.selectedDonorId;
 
@@ -234,6 +240,42 @@ function MatchingDonorsContent({ route, navigation }: Props) {
         .some(value => valueOrEmpty(value).toLocaleLowerCase().includes(needle)),
     );
   }, [donors, search]);
+
+  const selectedDonors = donors.filter(donor => selectedDonorIds.includes(donor.userId));
+  const canConfirmMatch = selectedDonors.length > 0 && Boolean(request) && !isSubmittingMatch;
+
+  const confirmMatch = async () => {
+    if (!request || selectedDonors.length === 0 || isSubmittingMatch) {
+      return;
+    }
+
+    setConfirmError(null);
+    setIsSubmittingMatch(true);
+    try {
+      await confirmDonorMatches(
+        request.id,
+        selectedDonors.map(donor => donor.userId),
+      );
+      navigation.navigate('MatchConfirmation', {
+        requestId: request.id,
+        donorId: selectedDonors[0].userId,
+      });
+    } catch (error) {
+      const firebaseError = error && typeof error === 'object'
+        ? error as { code?: unknown; message?: unknown }
+        : null;
+      console.error('Donor match persistence failed:', {
+        code: typeof firebaseError?.code === 'string' ? firebaseError.code : 'unknown',
+        message: typeof firebaseError?.message === 'string' ? firebaseError.message : String(error),
+        error,
+      });
+      setConfirmError(firebaseError?.code === 'permission-denied'
+        ? 'You do not have permission to save this match. Check Firestore access.'
+        : 'Unable to save this match. Check your connection and try again.');
+    } finally {
+      setIsSubmittingMatch(false);
+    }
+  };
 
   const toggleDonor = useCallback((donorId: string) => {
     setSelectedDonorIds(current => {
@@ -367,16 +409,22 @@ function MatchingDonorsContent({ route, navigation }: Props) {
           refreshControl={<RefreshControl refreshing={donorsLoading && donors.length > 0} onRefresh={() => void loadDonors()} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
         />
         <View style={styles.actionBar}>
+          {confirmError ? <Text accessibilityRole="alert" style={styles.confirmError}>{confirmError}</Text> : null}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Confirm match, ${selectedDonorIds.length} of ${requiredCount} donors selected`}
-            accessibilityHint="Match confirmation is not available yet."
-            accessibilityState={{ disabled: true }}
-            disabled
-            style={styles.confirmButton}
+            accessibilityHint="Saves the selected donor match and opens match confirmation."
+            accessibilityState={{ disabled: !canConfirmMatch, busy: isSubmittingMatch }}
+            disabled={!canConfirmMatch}
+            onPress={() => void confirmMatch()}
+            style={[styles.confirmButton, { opacity: canConfirmMatch ? 1 : 0.55 }]}
           >
-            <Ionicons name="checkmark-done-circle-outline" size={19} color={COLORS.white} />
-            <Text style={styles.confirmButtonText}>Confirm match ({selectedDonorIds.length} of {requiredCount})</Text>
+            {isSubmittingMatch
+              ? <ActivityIndicator size="small" color={COLORS.white} />
+              : <Ionicons name="checkmark-done-circle-outline" size={19} color={COLORS.white} />}
+            <Text style={styles.confirmButtonText}>
+              {isSubmittingMatch ? 'Saving match...' : `Confirm match (${selectedDonorIds.length} of ${requiredCount})`}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -469,6 +517,7 @@ const styles = StyleSheet.create({
   actionBar: { paddingTop: 9, paddingBottom: 8, borderTopWidth: 1, borderTopColor: '#F2E1E4', backgroundColor: '#FFF5F5' },
   confirmButton: { minHeight: 48, paddingHorizontal: 14, borderRadius: 14, backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: 0.78, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 5, elevation: 3 },
   confirmButtonText: { color: COLORS.white, fontSize: 12, fontWeight: '800' },
+  confirmError: { marginBottom: 8, color: COLORS.danger, fontSize: 11, lineHeight: 15, textAlign: 'center' },
   listState: { flexGrow: 1, minHeight: 210, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyIcon: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#FCEAEC', alignItems: 'center', justifyContent: 'center' },
   stateTitle: { color: COLORS.text, fontSize: 14, fontWeight: '800', textAlign: 'center' },
