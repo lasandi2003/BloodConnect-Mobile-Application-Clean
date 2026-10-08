@@ -6,5 +6,16 @@ export type VerificationMatchingStackParamList = {
   };
   MatchingDonors: {
     requestId: string;
+    selectedDonorId?: string;
+  };
+  DonorDetails: {
+    requestId: string;
+    donorId: string;
+    donorAlreadySelected: boolean;
+    canSelectDonor: boolean;
+  };
+  MatchConfirmation: {
+    requestId: string;
+    donorId: string;
   };
 };

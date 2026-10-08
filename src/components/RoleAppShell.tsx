@@ -50,6 +50,7 @@ interface PlaceholderConfig {
 interface Props {
   home: ReactNode;
   activityContent?: ReactNode;
+  servicesContent?: ReactNode;
   activity: PlaceholderConfig;
   services: PlaceholderConfig;
   profile: PlaceholderConfig;
@@ -99,6 +100,7 @@ const defaultTabs: TabItem[] = [
 export default function RoleAppShell({
   home,
   activityContent,
+  servicesContent,
   activity,
   services,
   profile,
@@ -131,7 +133,7 @@ export default function RoleAppShell({
   }
 
   if (activeTab === 'services') {
-    content = (
+    content = servicesContent ?? (
       <PlaceholderScreen
         title={services.title}
         description={services.description}
