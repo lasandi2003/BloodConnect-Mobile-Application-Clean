@@ -43,9 +43,15 @@ request-verification-and-donor-matching-
         dev
   activity: PlaceholderConfig;
 
+  activityContent?: ReactNode;
+
+
   services: PlaceholderConfig;
 
   profile: PlaceholderConfig;
+
+  profileContent?: ReactNode;
+
 
   activityContent?: ReactNode;
 
@@ -54,6 +60,7 @@ request-verification-and-donor-matching-
   reportsContent?: ReactNode;
 
   reports?: PlaceholderConfig;
+
 
   tabLabels?: Partial<Record<TabKey, string>>;
 
@@ -118,14 +125,19 @@ export default function RoleAppShell({
   activityContent,
   servicesContent,
   activity,
+  activityContent,
   services,
   profile,
+
+  profileContent,
+
 
   activityContent,
   servicesContent,
 
   reports,
   reportsContent,
+
 
   tabLabels,
   tabIcons,
@@ -178,9 +190,17 @@ export default function RoleAppShell({
 
   // INVENTORY
   if (activeTab === 'activity') {
+
+    content = activityContent ?? (
+      <PlaceholderScreen
+        title={activity.title}
+        description={activity.description}
+      />
+
  request-verification-and-donor-matching-
     content = activityContent ?? (
       <PlaceholderScreen title={activity.title} description={activity.description} />
+
     );
 
     content =
@@ -215,7 +235,7 @@ dev
 
   // PROFILE
   if (activeTab === 'profile') {
-    content = (
+    content = profileContent ?? (
       <PlaceholderScreen
         title={profile.title}
         description={profile.description}
