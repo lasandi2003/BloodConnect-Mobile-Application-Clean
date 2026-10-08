@@ -49,10 +49,25 @@ interface PlaceholderConfig {
 
 interface Props {
   home: ReactNode;
+
   activity: PlaceholderConfig;
+
   services: PlaceholderConfig;
+
   profile: PlaceholderConfig;
+
+  /*
+   * Optional real screens.
+   *
+   * If these are provided, they will be shown
+   * instead of PlaceholderScreen.
+   */
+  activityContent?: ReactNode;
+
+  servicesContent?: ReactNode;
+
   tabLabels?: Partial<Record<TabKey, string>>;
+
   tabIcons?: Partial<
     Record<
       TabKey,
@@ -71,18 +86,21 @@ const defaultTabs: TabItem[] = [
     icon: 'home-outline',
     activeIcon: 'home',
   },
+
   {
     key: 'activity',
     label: 'Activity',
     icon: 'list-outline',
     activeIcon: 'list',
   },
+
   {
     key: 'services',
     label: 'Services',
     icon: 'apps-outline',
     activeIcon: 'apps',
   },
+
   {
     key: 'profile',
     label: 'Profile',
@@ -96,6 +114,10 @@ export default function RoleAppShell({
   activity,
   services,
   profile,
+
+  activityContent,
+  servicesContent,
+
   tabLabels,
   tabIcons,
 }: Props) {
@@ -104,10 +126,15 @@ export default function RoleAppShell({
 
   const tabs = defaultTabs.map(tab => ({
     ...tab,
-    label: tabLabels?.[tab.key] ?? tab.label,
+
+    label:
+      tabLabels?.[tab.key] ??
+      tab.label,
+
     icon:
       tabIcons?.[tab.key]?.icon ??
       tab.icon,
+
     activeIcon:
       tabIcons?.[tab.key]?.activeIcon ??
       tab.activeIcon,
@@ -115,23 +142,37 @@ export default function RoleAppShell({
 
   let content: ReactNode = home;
 
+  // ========================================
+  // INVENTORY / ACTIVITY TAB
+  // ========================================
+
   if (activeTab === 'activity') {
-    content = (
-      <PlaceholderScreen
-        title={activity.title}
-        description={activity.description}
-      />
-    );
+    content =
+      activityContent ?? (
+        <PlaceholderScreen
+          title={activity.title}
+          description={activity.description}
+        />
+      );
   }
 
+  // ========================================
+  // REQUESTS / SERVICES TAB
+  // ========================================
+
   if (activeTab === 'services') {
-    content = (
-      <PlaceholderScreen
-        title={services.title}
-        description={services.description}
-      />
-    );
+    content =
+      servicesContent ?? (
+        <PlaceholderScreen
+          title={services.title}
+          description={services.description}
+        />
+      );
   }
+
+  // ========================================
+  // PROFILE TAB
+  // ========================================
 
   if (activeTab === 'profile') {
     content = (
