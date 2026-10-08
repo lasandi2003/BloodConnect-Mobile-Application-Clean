@@ -40,13 +40,13 @@ const initialForm: PatientInformationForm = {
 export default function PatientInformationScreen({ navigation }: Props) {
   const [form, setForm] = useState<PatientInformationForm>(initialForm);
   const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
-  const { clearPreparedDraft, resetDraft } = useEmergencyRequestDraft();
+  const { clearPreparedDraft, resetDraft, submittedRequest } = useEmergencyRequestDraft();
   const [pendingLeaveAction, setPendingLeaveAction] = useState<NavigationAction | null>(null);
   const validation = hasAttemptedNext ? validatePatientInformation(form) : null;
   const errors: PatientFormErrors = validation && !validation.valid ? validation.errors : {};
   const hasEnteredInformation = Object.values(form).some(value => value.trim().length > 0);
 
-  usePreventRemove(hasEnteredInformation, ({ data }) => {
+  usePreventRemove(hasEnteredInformation && !submittedRequest, ({ data }) => {
     Keyboard.dismiss();
     setPendingLeaveAction(data.action);
   });

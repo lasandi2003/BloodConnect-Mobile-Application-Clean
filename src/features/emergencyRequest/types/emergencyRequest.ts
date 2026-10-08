@@ -43,3 +43,21 @@ export interface EmergencyRequestDraft {
   requiredDate: string; // Local calendar date, YYYY-MM-DD; no time-zone conversion.
   urgencyLevel: UrgencyLevel;
 }
+
+export interface SubmittedRequestReceipt {
+  requestId: string;
+  bloodGroup: BloodGroup;
+  unitsRequired: number;
+  hospitalName: string;
+  requiredDate: string;
+  urgencyLevel: UrgencyLevel;
+  status: string;
+}
+
+export interface RequestStatusDetails extends SubmittedRequestReceipt {
+  verified: boolean;
+  location: string;
+}
+
+export type UpdateRequestForm = Pick<HospitalDetailsForm,
+  'unitsRequired' | 'hospitalName' | 'hospitalLocation' | 'requiredDate' | 'urgencyLevel'>;
