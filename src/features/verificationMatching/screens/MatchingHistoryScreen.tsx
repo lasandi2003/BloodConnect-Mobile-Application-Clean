@@ -20,6 +20,10 @@ import RoleAppShell from '../../../components/RoleAppShell';
 import { COLORS } from '../../../constants/colors';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
 import {
+  openHealthcareDonorMatching,
+  openHealthcareDonorProfile,
+} from '../navigation/healthcareTabNavigation';
+import {
   getMatchingHistory,
   type MatchingHistoryRecord,
 } from '../services/verificationService';
@@ -400,6 +404,8 @@ export default function MatchingHistoryScreen(props: Props) {
       tabPressHandlers={{
         home: () => navigation.popToTop(),
         activity: openPending,
+        services: () => void openHealthcareDonorMatching(navigation, props.route.params?.requestId),
+        profile: () => void openHealthcareDonorProfile(navigation, props.route.params),
       }}
     />
   );

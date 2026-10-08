@@ -17,6 +17,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useAuth } from '../../auth/context/AuthContext';
 import RoleAppShell from '../../../components/RoleAppShell';
+import {
+  openHealthcareDonorMatching,
+  openHealthcareDonorProfile,
+} from '../navigation/healthcareTabNavigation';
 import { COLORS } from '../../../constants/colors';
 import { getDonorProfile } from '../../donor/services/donorService';
 import type { DonorProfile, EmergencyRequest } from '../../donor/types/donor';
@@ -423,6 +427,8 @@ export default function DonorCommunicationScreen(props: Props) {
       tabPressHandlers={{
         home: () => navigation.popToTop(),
         activity: () => navigation.navigate('PendingBloodRequests'),
+        services: () => void openHealthcareDonorMatching(navigation, props.route.params.requestId),
+        profile: () => void openHealthcareDonorProfile(navigation, props.route.params),
       }}
     />
   );

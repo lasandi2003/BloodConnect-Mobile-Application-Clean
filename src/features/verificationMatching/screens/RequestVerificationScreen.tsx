@@ -265,8 +265,7 @@ export default function RequestVerificationScreen({ route, navigation }: Props) 
             <View style={styles.actions}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityState={{ disabled: true }}
-                disabled
+                onPress={() => navigation.navigate('MatchingDonors', { requestId })}
                 style={styles.rejectButton}
               >
                 <Ionicons name="close" size={18} color={COLORS.primary} />

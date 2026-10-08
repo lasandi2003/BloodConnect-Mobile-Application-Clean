@@ -145,6 +145,7 @@ function MetricCard({
   color,
   loading,
   urgent,
+  onPress,
 }: {
   label: string;
   value: number | null;
@@ -152,17 +153,12 @@ function MetricCard({
   color: string;
   loading: boolean;
   urgent?: boolean;
+  onPress?: () => void;
 }) {
   const noMatches = label === 'Matched' && (!value || value < 1);
 
-  return (
-    <View
-      style={[
-        styles.statCard,
-        { borderLeftColor: color },
-        urgent && value !== null && value > 0 && styles.urgentCardGlow,
-      ]}
-    >
+  const cardContent = (
+    <>
       <View style={styles.statTopLine}>
         <Ionicons name={icon} size={20} color={color} />
         {urgent && value !== null && value > 0 ? <UrgentDot /> : null}
@@ -175,7 +171,26 @@ function MetricCard({
         <Text style={styles.statCount}>{value ?? '—'}</Text>
       )}
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </>
+  );
+
+  const cardStyle = [
+    styles.statCard,
+    { borderLeftColor: color },
+    urgent && value !== null && value > 0 && styles.urgentCardGlow,
+  ];
+
+  return onPress ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${label.toLowerCase()} blood requests`}
+      onPress={onPress}
+      style={cardStyle}
+    >
+      {cardContent}
+    </Pressable>
+  ) : (
+    <View style={cardStyle}>{cardContent}</View>
   );
 }
 
@@ -278,16 +293,44 @@ export default function HealthcareDashboardScreen({
   onOpenPendingRequests,
   onOpenRequestVerification,
   onOpenHistory,
+  onOpenDonorMatching,
+  onVerifiedRequestChange,
 }: {
   onOpenPendingRequests: () => void;
   onOpenRequestVerification: (requestId: string) => void;
   onOpenHistory: () => void;
+  onOpenDonorMatching?: (requestId: string) => void;
+  onVerifiedRequestChange?: (requestId: string | null) => void;
 }) {
   const { profile, logout } = useAuth();
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const latestVerifiedRequestId = useMemo(
+    () => summary.recentRequests.find(request =>
+      request.verified &&
+      !['completed', 'cancelled', 'closed', 'rejected'].includes(request.status.toLowerCase()),
+    )?.id ?? null,
+    [summary.recentRequests],
+  );
+
+  useEffect(() => {
+    onVerifiedRequestChange?.(latestVerifiedRequestId);
+  }, [latestVerifiedRequestId, onVerifiedRequestChange]);
+
+  function openLatestVerifiedMatching() {
+    if (!latestVerifiedRequestId) {
+      Alert.alert(
+        'Donor matching unavailable',
+        'No verified request available for donor matching.',
+      );
+      return;
+    }
+
+    onOpenDonorMatching?.(latestVerifiedRequestId);
+  }
 
   const loadDashboard = useCallback(async () => {
     try {
@@ -412,6 +455,7 @@ export default function HealthcareDashboardScreen({
             icon="time-outline"
             color="#D99A16"
             loading={loading}
+            onPress={onOpenPendingRequests}
           />
           <MetricCard
             label="Verified"
@@ -419,6 +463,7 @@ export default function HealthcareDashboardScreen({
             icon="checkmark-circle"
             color="#20A66A"
             loading={loading}
+            onPress={openLatestVerifiedMatching}
           />
           <MetricCard
             label="Matched"
@@ -426,6 +471,7 @@ export default function HealthcareDashboardScreen({
             icon="people"
             color="#3980DF"
             loading={loading}
+            onPress={onOpenHistory}
           />
           <MetricCard
             label="Urgent"
@@ -434,6 +480,7 @@ export default function HealthcareDashboardScreen({
             color="#C8102E"
             loading={loading}
             urgent
+            onPress={onOpenPendingRequests}
           />
         </View>
 
@@ -469,7 +516,12 @@ export default function HealthcareDashboardScreen({
 
         <View style={styles.recentHeading}>
           <Text style={styles.sectionTitle}>Recent Requests</Text>
-          <Pressable accessibilityRole="button" style={styles.viewAllButton}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="View all pending blood requests"
+            onPress={onOpenPendingRequests}
+            style={styles.viewAllButton}
+          >
             <Text style={styles.viewAllText}>View all</Text>
             <Ionicons name="arrow-forward" size={14} color="#C8102E" />
           </Pressable>

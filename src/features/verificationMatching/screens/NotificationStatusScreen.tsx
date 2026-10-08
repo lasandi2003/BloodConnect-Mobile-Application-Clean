@@ -16,6 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../../constants/colors';
 import RoleAppShell from '../../../components/RoleAppShell';
+import {
+  openHealthcareDonorMatching,
+  openHealthcareDonorProfile,
+} from '../navigation/healthcareTabNavigation';
 import type { DonorProfile, DonorResponse, EmergencyRequest } from '../../donor/types/donor';
 import { getDonorProfile, getDonorResponseForRequest } from '../../donor/services/donorService';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
@@ -400,6 +404,8 @@ export default function NotificationStatusScreen(props: Props) {
       tabPressHandlers={{
         home: () => navigation.popToTop(),
         activity: () => navigation.navigate('PendingBloodRequests'),
+        services: () => void openHealthcareDonorMatching(navigation, props.route.params.requestId),
+        profile: () => void openHealthcareDonorProfile(navigation, props.route.params),
       }}
     />
   );

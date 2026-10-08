@@ -21,6 +21,10 @@ import { COLORS } from '../../../constants/colors';
 import RoleAppShell from '../../../components/RoleAppShell';
 import PendingRequestCard from '../components/PendingRequestCard';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
+import {
+  openHealthcareDonorMatching,
+  openHealthcareDonorProfile,
+} from '../navigation/healthcareTabNavigation';
 import { getPendingVerificationRequests } from '../services/verificationService';
 import type { BloodGroup } from '../../donor/types/donor';
 
@@ -325,7 +329,11 @@ export default function PendingBloodRequestsScreen() {
         description: 'Doctor or nurse account details will be managed here.',
       }}
       initialTab="activity"
-      tabPressHandlers={{ home: () => navigation.goBack() }}
+      tabPressHandlers={{
+        home: () => navigation.goBack(),
+        services: () => void openHealthcareDonorMatching(navigation),
+        profile: () => void openHealthcareDonorProfile(navigation),
+      }}
       tabLabels={{ home: 'Home', activity: 'Requests', services: 'Donors', profile: 'Profile' }}
       activeTabColor="#C8102E"
       bottomBorderColor="#F3C9CF"

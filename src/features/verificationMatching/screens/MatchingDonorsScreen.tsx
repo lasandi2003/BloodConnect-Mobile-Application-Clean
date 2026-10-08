@@ -21,6 +21,9 @@ import RoleAppShell from '../../../components/RoleAppShell';
 import type { DonorProfile, EmergencyRequest } from '../../donor/types/donor';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
 import {
+  openHealthcareDonorProfile,
+} from '../navigation/healthcareTabNavigation';
+import {
   confirmDonorMatches,
   getMatchingDonors,
   getVerificationRequestById,
@@ -172,7 +175,11 @@ function DonorCard({
   );
 }
 
-function MatchingDonorsContent({ route, navigation }: Props) {
+function MatchingDonorsContent({
+  route,
+  navigation,
+  onSelectedDonorChange,
+}: Props & { onSelectedDonorChange: (donorId: string | undefined) => void }) {
   const { requestId } = route.params;
   const [request, setRequest] = useState<EmergencyRequest | null>(null);
   const [requestLoading, setRequestLoading] = useState(true);
@@ -186,6 +193,10 @@ function MatchingDonorsContent({ route, navigation }: Props) {
   const [isSubmittingMatch, setIsSubmittingMatch] = useState(false);
   const requiredCount = request ? requiredDonorCount(request) : 0;
   const selectedDonorIdFromDetails = route.params.selectedDonorId;
+
+  useEffect(() => {
+    onSelectedDonorChange(selectedDonorIds[0]);
+  }, [onSelectedDonorChange, selectedDonorIds]);
 
   useEffect(() => {
     if (!selectedDonorIdFromDetails) return;
@@ -434,13 +445,21 @@ function MatchingDonorsContent({ route, navigation }: Props) {
 
 export default function MatchingDonorsScreen(props: Props) {
   const { navigation } = props;
+  const [selectedDonorId, setSelectedDonorId] = useState<string | undefined>(
+    props.route.params.selectedDonorId,
+  );
 
   return (
     <RoleAppShell
       home={<PlaceholderScreen title="Healthcare dashboard" description="Return to your verification dashboard." />}
       activityContent={<PlaceholderScreen title="Pending requests" description="Review blood requests waiting for verification." />}
       activity={{ title: 'Pending Requests', description: 'Requests waiting for healthcare verification.' }}
-      servicesContent={<MatchingDonorsContent {...props} />}
+      servicesContent={(
+        <MatchingDonorsContent
+          {...props}
+          onSelectedDonorChange={setSelectedDonorId}
+        />
+      )}
       services={{ title: 'Donor Matching', description: 'Review available donors for the verified request.' }}
       profile={{ title: 'Healthcare Profile', description: 'Healthcare account details.' }}
       initialTab="services"
@@ -454,6 +473,10 @@ export default function MatchingDonorsScreen(props: Props) {
       tabPressHandlers={{
         home: () => navigation.popToTop(),
         activity: () => navigation.navigate('PendingBloodRequests'),
+        profile: () => void openHealthcareDonorProfile(navigation, {
+          requestId: props.route.params.requestId,
+          donorId: selectedDonorId,
+        }),
       }}
     />
   );

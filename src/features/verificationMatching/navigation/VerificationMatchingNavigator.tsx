@@ -1,5 +1,7 @@
 import React from 'react';
 
+import { Alert } from 'react-native';
+
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -14,6 +16,9 @@ import MatchConfirmationScreen from '../screens/MatchConfirmationScreen';
 import NotificationStatusScreen from '../screens/NotificationStatusScreen';
 import DonorCommunicationScreen from '../screens/DonorCommunicationScreen';
 import MatchingHistoryScreen from '../screens/MatchingHistoryScreen';
+import {
+  openHealthcareDonorProfile,
+} from './healthcareTabNavigation';
 import type { VerificationMatchingStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<VerificationMatchingStackParamList>();
@@ -21,10 +26,24 @@ type Navigation = NativeStackNavigationProp<VerificationMatchingStackParamList>;
 
 function VerificationDashboardRoute() {
   const navigation = useNavigation<Navigation>();
+  const [latestVerifiedRequestId, setLatestVerifiedRequestId] = React.useState<string | null>(null);
   const openPendingRequests = () => navigation.navigate('PendingBloodRequests');
   const openRequestVerification = (requestId: string) =>
     navigation.navigate('RequestVerification', { requestId });
   const openHistory = () => navigation.navigate('MatchingHistory');
+  const openDonorMatching = (requestId: string) =>
+    navigation.navigate('MatchingDonors', { requestId });
+  const openDonorMatchingFromTab = () => {
+    if (!latestVerifiedRequestId) {
+      Alert.alert(
+        'Donor matching unavailable',
+        'No verified request available for donor matching.',
+      );
+      return;
+    }
+
+    openDonorMatching(latestVerifiedRequestId);
+  };
 
   return (
     <RoleAppShell
@@ -33,6 +52,8 @@ function VerificationDashboardRoute() {
           onOpenPendingRequests={openPendingRequests}
           onOpenRequestVerification={openRequestVerification}
           onOpenHistory={openHistory}
+          onOpenDonorMatching={openDonorMatching}
+          onVerifiedRequestChange={setLatestVerifiedRequestId}
         />
       )}
       activity={{
@@ -54,7 +75,11 @@ function VerificationDashboardRoute() {
         activity: { icon: 'document-text-outline', activeIcon: 'document-text' },
         services: { icon: 'people-outline', activeIcon: 'people' },
       }}
-      tabPressHandlers={{ activity: openPendingRequests }}
+      tabPressHandlers={{
+        activity: openPendingRequests,
+        services: openDonorMatchingFromTab,
+        profile: () => void openHealthcareDonorProfile(navigation),
+      }}
     />
   );
 }
