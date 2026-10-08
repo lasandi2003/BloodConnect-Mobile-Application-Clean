@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { COLORS } from '../../../constants/colors';
 import type { DonorProfile } from '../../donor/types/donor';
 import { getDonorProfile } from '../../donor/services/donorService';
+import { confirmDonorMatches } from '../services/verificationService';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
 
 type Props = NativeStackScreenProps<VerificationMatchingStackParamList, 'DonorDetails'>;
@@ -81,6 +82,8 @@ export default function DonorDetailsScreen({ route, navigation }: Props) {
   const [donor, setDonor] = useState<DonorProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
+  const [savingMatch, setSavingMatch] = useState(false);
 
   const loadDonor = useCallback(async () => {
     setLoading(true);
@@ -116,8 +119,28 @@ export default function DonorDetailsScreen({ route, navigation }: Props) {
   }, [donor]);
   const donorIsAvailable = donor?.isAvailable === true;
 
-  const confirmSelection = () => {
-    navigation.navigate('MatchConfirmation', { requestId, donorId });
+  const confirmSelection = async () => {
+    if (!canSelectDonor || savingMatch) return;
+    setSavingMatch(true);
+    setMatchError(null);
+    try {
+      await confirmDonorMatches(requestId, [donorId]);
+      navigation.navigate('MatchConfirmation', { requestId, donorId });
+    } catch (matchSaveError) {
+      const firebaseError = matchSaveError && typeof matchSaveError === 'object'
+        ? matchSaveError as { code?: unknown; message?: unknown }
+        : null;
+      console.error('Donor profile match persistence failed:', {
+        code: typeof firebaseError?.code === 'string' ? firebaseError.code : 'unknown',
+        message: typeof firebaseError?.message === 'string' ? firebaseError.message : String(matchSaveError),
+        error: matchSaveError,
+      });
+      setMatchError(firebaseError?.code === 'permission-denied'
+        ? 'You do not have permission to save this match. Check Firestore access.'
+        : 'Unable to save this match. Check your connection and try again.');
+    } finally {
+      setSavingMatch(false);
+    }
   };
 
   const ageText = typeof donor?.age === 'number' && Number.isFinite(donor.age)
@@ -232,17 +255,22 @@ export default function DonorDetailsScreen({ route, navigation }: Props) {
             </ScrollView>
 
             <View style={styles.actionBar}>
+              {matchError ? <Text accessibilityRole="alert" style={styles.matchError}>{matchError}</Text> : null}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={donorAlreadySelected ? 'Donor already selected' : 'Confirm as matching donor'}
-                accessibilityState={{ disabled: !canSelectDonor }}
-                disabled={!canSelectDonor}
-                onPress={confirmSelection}
-                style={[styles.confirmButton, !canSelectDonor && styles.disabledButton]}
+                accessibilityState={{ disabled: !canSelectDonor || savingMatch, busy: savingMatch }}
+                disabled={!canSelectDonor || savingMatch}
+                onPress={() => void confirmSelection()}
+                style={[styles.confirmButton, (!canSelectDonor || savingMatch) && styles.disabledButton]}
               >
-                <Ionicons name="heart" size={18} color={COLORS.white} />
+                {savingMatch
+                  ? <ActivityIndicator size="small" color={COLORS.white} />
+                  : <Ionicons name="heart" size={18} color={COLORS.white} />}
                 <Text style={styles.confirmText}>
-                  {donorAlreadySelected
+                  {savingMatch
+                    ? 'Saving match...'
+                    : donorAlreadySelected
                     ? 'Already selected — return to Donor List'
                     : canSelectDonor
                       ? 'Confirm as Matching Donor'
@@ -317,6 +345,7 @@ const styles = StyleSheet.create({
   actionBar: { paddingTop: 10, paddingBottom: 6, borderTopWidth: 1, borderTopColor: '#F2E1E4', backgroundColor: COLORS.white, marginHorizontal: -14, paddingHorizontal: 14 },
   confirmButton: { minHeight: 52, paddingHorizontal: 14, borderRadius: 15, backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 3 },
   disabledButton: { opacity: 0.55 },
+  matchError: { marginBottom: 8, color: COLORS.danger, fontSize: 11, lineHeight: 15, textAlign: 'center' },
   confirmText: { color: COLORS.white, fontSize: 12, fontWeight: '800', textAlign: 'center', flexShrink: 1 },
   stateArea: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 10 },
   stateTitle: { color: COLORS.text, fontSize: 15, fontWeight: '800', textAlign: 'center' },

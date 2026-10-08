@@ -11,6 +11,8 @@ import RequestVerificationScreen from '../screens/RequestVerificationScreen';
 import MatchingDonorsScreen from '../screens/MatchingDonorsScreen';
 import DonorDetailsScreen from '../screens/DonorDetailsScreen';
 import MatchConfirmationScreen from '../screens/MatchConfirmationScreen';
+import NotificationStatusScreen from '../screens/NotificationStatusScreen';
+import MatchingHistoryScreen from '../screens/MatchingHistoryScreen';
 import type { VerificationMatchingStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<VerificationMatchingStackParamList>();
@@ -21,6 +23,7 @@ function VerificationDashboardRoute() {
   const openPendingRequests = () => navigation.navigate('PendingBloodRequests');
   const openRequestVerification = (requestId: string) =>
     navigation.navigate('RequestVerification', { requestId });
+  const openHistory = () => navigation.navigate('MatchingHistory');
 
   return (
     <RoleAppShell
@@ -28,6 +31,7 @@ function VerificationDashboardRoute() {
         <HealthcareDashboardScreen
           onOpenPendingRequests={openPendingRequests}
           onOpenRequestVerification={openRequestVerification}
+          onOpenHistory={openHistory}
         />
       )}
       activity={{
@@ -66,6 +70,8 @@ export default function VerificationMatchingNavigator() {
       <Stack.Screen name="MatchingDonors" component={MatchingDonorsScreen} />
       <Stack.Screen name="DonorDetails" component={DonorDetailsScreen} />
       <Stack.Screen name="MatchConfirmation" component={MatchConfirmationScreen} />
+      <Stack.Screen name="NotificationStatus" component={NotificationStatusScreen} />
+      <Stack.Screen name="MatchingHistory" component={MatchingHistoryScreen} />
     </Stack.Navigator>
   );
 }

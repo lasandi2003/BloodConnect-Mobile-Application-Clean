@@ -204,9 +204,8 @@ export default function MatchConfirmationScreen({ route, navigation }: Props) {
               <View style={styles.actions}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Notify donor. Notifications are not connected yet."
-                accessibilityState={{ disabled: true }}
-                disabled
+                accessibilityLabel="Open notification status for the matched donor"
+                onPress={() => navigation.navigate('MatchingHistory', { requestId, donorId })}
                 style={[styles.primaryButton, styles.notifyDisabled]}
               >
                 <Ionicons name="notifications-outline" size={20} color={COLORS.white} />

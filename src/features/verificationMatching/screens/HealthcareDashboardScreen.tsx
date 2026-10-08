@@ -277,9 +277,11 @@ function RequestCard({
 export default function HealthcareDashboardScreen({
   onOpenPendingRequests,
   onOpenRequestVerification,
+  onOpenHistory,
 }: {
   onOpenPendingRequests: () => void;
   onOpenRequestVerification: (requestId: string) => void;
+  onOpenHistory: () => void;
 }) {
   const { profile, logout } = useAuth();
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
@@ -440,7 +442,13 @@ export default function HealthcareDashboardScreen({
             <Pressable
               key={action.label}
               accessibilityRole="button"
-              onPress={action.label === 'Verify Request' ? onOpenPendingRequests : undefined}
+              onPress={
+                action.label === 'Verify Request'
+                  ? onOpenPendingRequests
+                  : action.label === 'History'
+                    ? onOpenHistory
+                    : undefined
+              }
               style={({ pressed }) => [
                 styles.quickAction,
                 action.primary ? styles.primaryAction : styles.secondaryAction,
