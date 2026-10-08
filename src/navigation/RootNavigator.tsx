@@ -1,4 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, {
+  useEffect,
+  useState,
+} from 'react';
+
 import {
   StyleSheet,
   Text,
@@ -26,9 +30,13 @@ import {
 // ========================================
 
 import SplashScreen from '../features/auth/screens/SplashScreen';
+
 import LoginScreen from '../features/auth/screens/LoginScreen';
+
 import RoleSelectionScreen from '../features/auth/screens/RoleSelectionScreen';
+
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
+
 import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen';
 
 // ========================================
@@ -59,7 +67,13 @@ import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashbo
 
 import RequestManagementScreen from '../features/bloodBankRequests/screens/RequestManagementScreen';
 
-import RequestApprovalDetailsScreen from '../features/bloodBankRequests/screens/RequestApprovalDetailsScreen';
+// ========================================
+// BLOOD BANK INVENTORY SCREENS
+// ========================================
+
+import UpdateStockScreen from '../features/inventoryAdmin/screens/UpdateStockScreen';
+
+import InventoryReportsScreen from '../features/inventoryAdmin/screens/InventoryReportsScreen';
 
 // ========================================
 // COMMON COMPONENTS
@@ -80,12 +94,6 @@ const AuthStack =
     AuthStackParamList
   >();
 
-/**
- * Authentication navigation.
- *
- * Used only when there is no logged-in
- * Firebase user/profile.
- */
 function AuthNavigator() {
   return (
     <AuthStack.Navigator
@@ -122,10 +130,6 @@ function AuthNavigator() {
 // DASHBOARD ROUTER
 // ========================================
 
-/**
- * Routes authenticated users according to
- * the role saved in Firestore.
- */
 function DashboardRouter() {
   const {
     profile,
@@ -166,17 +170,6 @@ function DashboardRouter() {
     // DONOR
     // ======================================
 
-    /**
-     * Donors have their own navigator:
-     *
-     * Dashboard
-     * Requests
-     * Request Details
-     * Confirmation
-     * History
-     * Profile
-     */
-
     case 'donor':
 
       return (
@@ -184,7 +177,7 @@ function DashboardRouter() {
       );
 
     // ======================================
-    // HOSPITAL / REQUESTER
+    // REQUESTER
     // ======================================
 
     case 'requester':
@@ -201,6 +194,7 @@ function DashboardRouter() {
 
       return (
         <RoleAppShell
+
           home={
             <HealthcareDashboardScreen />
           }
@@ -254,6 +248,7 @@ function DashboardRouter() {
                 'people',
             },
           }}
+
         />
       );
 
@@ -275,7 +270,7 @@ function DashboardRouter() {
           }
 
           // --------------------------------
-          // INVENTORY TAB
+          // INVENTORY
           // --------------------------------
 
           activity={{
@@ -283,11 +278,17 @@ function DashboardRouter() {
               'Blood Inventory',
 
             description:
-              'Blood stock levels and inventory updates will be connected here.',
+              'Manage blood stock and inventory.',
           }}
 
+          activityContent={
+            <UpdateStockScreen
+              onBack={() => {}}
+            />
+          }
+
           // --------------------------------
-          // REQUESTS TAB
+          // REQUESTS
           // --------------------------------
 
           services={{
@@ -295,11 +296,17 @@ function DashboardRouter() {
               'Emergency Requests',
 
             description:
-              'Blood-bank emergency request management will be connected here.',
+              'Manage emergency blood requests.',
           }}
 
+          servicesContent={
+            <RequestManagementScreen
+              onBack={() => {}}
+            />
+          }
+
           // --------------------------------
-          // PROFILE TAB
+          // PROFILE
           // --------------------------------
 
           profile={{
@@ -307,19 +314,49 @@ function DashboardRouter() {
               'Blood Bank Profile',
 
             description:
-              'Blood-bank account details will be managed here.',
+              'Blood-bank account details.',
           }}
+
+          // --------------------------------
+          // REPORTS
+          // --------------------------------
+
+          reports={{
+            title:
+              'Inventory Reports',
+
+            description:
+              'View blood availability and inventory reports.',
+          }}
+
+          reportsContent={
+            <InventoryReportsScreen
+              onBack={() => {}}
+            />
+          }
+
+          // --------------------------------
+          // SHOW REPORTS
+          // --------------------------------
+
+          showReports={true}
 
           // --------------------------------
           // TAB LABELS
           // --------------------------------
 
           tabLabels={{
+            home:
+              'Home',
+
             activity:
               'Inventory',
 
             services:
               'Requests',
+
+            reports:
+              'Reports',
           }}
 
           // --------------------------------
@@ -327,6 +364,15 @@ function DashboardRouter() {
           // --------------------------------
 
           tabIcons={{
+
+            home: {
+              icon:
+                'home-outline',
+
+              activeIcon:
+                'home',
+            },
+
             activity: {
               icon:
                 'water-outline',
@@ -342,7 +388,17 @@ function DashboardRouter() {
               activeIcon:
                 'alert',
             },
+
+            reports: {
+              icon:
+                'bar-chart-outline',
+
+              activeIcon:
+                'bar-chart',
+            },
+
           }}
+
         />
       );
 
@@ -408,6 +464,7 @@ function DashboardRouter() {
                 'settings',
             },
           }}
+
         />
       );
 
@@ -442,9 +499,6 @@ function DashboardRouter() {
 // ROOT NAVIGATOR
 // ========================================
 
-/**
- * Main application navigation.
- */
 export default function RootNavigator() {
 
   const {
@@ -485,11 +539,6 @@ export default function RootNavigator() {
 
   // ========================================
   // KEEP SPLASH VISIBLE
-  // ========================================
-  //
-  // 1. At least 2.5 seconds
-  // 2. While Firebase checks login
-  //
   // ========================================
 
   if (
