@@ -1,3 +1,7 @@
+export function canUpdateRequest(status: string, verified: boolean) {
+  return !verified && ['pending_verification', 'pending', 'open'].includes(status.trim().toLowerCase());
+}
+
 export function getRequestStatusView(status: string, verified: boolean) {
   const normalized = status.trim().toLowerCase();
   if (['cancelled', 'rejected', 'closed'].includes(normalized)) {

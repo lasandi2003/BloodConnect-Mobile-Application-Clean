@@ -10,7 +10,7 @@ import type { RequesterStackParamList } from '../navigation/types';
 import type { RequestStatusDetails } from '../types/emergencyRequest';
 import { getRequestStatusErrorMessage, watchEmergencyRequest } from '../services/emergencyRequestService';
 import { formatDisplayDate } from '../utils/hospitalValidation';
-import { getRequestStatusView } from '../utils/requestStatus';
+import { canUpdateRequest, getRequestStatusView } from '../utils/requestStatus';
 
 type Props = NativeStackScreenProps<RequesterStackParamList, 'RequestStatus'>;
 const steps = ['Request submitted', 'Healthcare verification', 'Donor matching', 'Request fulfilled'];
@@ -70,6 +70,7 @@ export default function RequestStatusScreen({ navigation, route }: Props) {
         ) : null}
         {request && status ? (
           <>
+            {route.params.updateSaved ? <Text style={styles.successText} accessibilityRole="alert">Request updated successfully.</Text> : null}
             <View style={styles.statusCard}>
               <Text style={styles.statusLabel}>{status.label}</Text>
               <Text style={styles.description}>{status.description}</Text>
@@ -103,9 +104,15 @@ export default function RequestStatusScreen({ navigation, route }: Props) {
               })}
             </View>
             <View style={styles.futureActions}>
-              <View style={styles.disabledButton}><Text style={styles.secondaryText}>Update Request</Text><Text style={styles.secondaryText}>Coming soon</Text></View>
+              <Pressable style={[styles.updateButton, (!canUpdateRequest(request.status, request.verified) || fromCache || pendingWrites) && styles.disabledButton]}
+                disabled={!canUpdateRequest(request.status, request.verified) || fromCache || pendingWrites}
+                onPress={() => navigation.navigate('UpdateRequest', { requestId })} accessibilityRole="button"
+                accessibilityState={{ disabled: !canUpdateRequest(request.status, request.verified) || fromCache || pendingWrites }}>
+                <Text style={styles.secondaryText}>Update Request</Text>
+              </Pressable>
               <View style={styles.disabledButton}><Text style={styles.secondaryText}>Cancel Request</Text><Text style={styles.secondaryText}>Coming soon</Text></View>
             </View>
+            {!canUpdateRequest(request.status, request.verified) ? <Text style={styles.editHint}>Only requests awaiting verification can be edited.</Text> : null}
           </>
         ) : null}
         <Pressable style={styles.dashboardButton} onPress={returnToDashboard} accessibilityRole="button"><Text style={styles.dashboardText}>Back to Dashboard</Text></Pressable>
@@ -150,6 +157,10 @@ const styles = StyleSheet.create({
   retryText: { color: COLORS.primary, fontWeight: '700' },
   futureActions: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   disabledButton: { flex: 1, padding: 12, borderRadius: 10, backgroundColor: COLORS.border, alignItems: 'center' },
+  updateButton: { flex: 1, minHeight: 52, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary,
+    backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' },
+  successText: { fontSize: 13, color: COLORS.success, fontWeight: '700', marginBottom: 14 },
+  editHint: { fontSize: 12, lineHeight: 18, color: COLORS.textSecondary, marginBottom: 16 },
   dashboardButton: { minHeight: 52, borderRadius: 10, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
   dashboardText: { fontSize: 14, fontWeight: '700', color: COLORS.white },
 });

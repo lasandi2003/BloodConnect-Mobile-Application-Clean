@@ -58,3 +58,6 @@ export interface RequestStatusDetails extends SubmittedRequestReceipt {
   verified: boolean;
   location: string;
 }
+
+export type UpdateRequestForm = Pick<HospitalDetailsForm,
+  'unitsRequired' | 'hospitalName' | 'hospitalLocation' | 'requiredDate' | 'urgencyLevel'>;

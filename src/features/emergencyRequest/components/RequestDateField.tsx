@@ -8,9 +8,10 @@ interface Props {
   value: string;
   error?: string;
   onChange: (date: string) => void;
+  disabled?: boolean;
 }
 
-export default function RequestDateField({ value, error, onChange }: Props) {
+export default function RequestDateField({ value, error, onChange, disabled }: Props) {
   const [visible, setVisible] = useState(false);
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const today = toCalendarDate(new Date());
@@ -31,7 +32,8 @@ export default function RequestDateField({ value, error, onChange }: Props) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>Required Date <Text style={styles.required}>*</Text></Text>
-      <Pressable style={[styles.dateButton, error && styles.invalid]} onPress={openCalendar}
+      <Pressable style={[styles.dateButton, error && styles.invalid]} onPress={openCalendar} disabled={disabled}
+        accessibilityState={{ disabled: Boolean(disabled) }}
         accessibilityRole="button" accessibilityLabel={`Required Date: ${value || 'Select a date'}`}>
         <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
         <Text style={[styles.value, !value && styles.placeholder]}>{value || 'Select required date'}</Text>

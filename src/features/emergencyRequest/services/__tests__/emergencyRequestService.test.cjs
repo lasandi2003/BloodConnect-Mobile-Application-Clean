@@ -23,6 +23,7 @@ function setup() {
   const state = { writes: 0, transactions: 0, failBeforeCommit: false, failAfterCommit: false };
   const auth = { currentUser: { uid: 'requester-user' } };
   const firestore = {
+    getDocFromServer: async reference => ({ exists: () => records.has(reference.path), data: () => records.get(reference.path) }),
     onSnapshot: (reference, options, next, error) => {
       state.listener = { reference, options, next, error, closed: false };
       return () => { state.listener.closed = true; };
@@ -36,6 +37,7 @@ function setup() {
       const receipt = await callback({
         get: async reference => ({ exists: () => records.has(reference.path), data: () => records.get(reference.path) }),
         set: (reference, data) => pending.push([reference.path, data]),
+        update: (reference, data) => pending.push([reference.path, { ...records.get(reference.path), ...data }]),
       });
       if (state.failBeforeCommit) {
         state.failBeforeCommit = false;
@@ -239,4 +241,82 @@ test('progress uses saved states without inventing matches or completed donation
   assert.equal(statusView('cancelled', true).stage, null);
   assert.equal(statusView('cancelled', true).terminal, true);
   assert.equal(statusView('unexpected_status', true).stage, null);
+});
+
+async function updateFixture() {
+  const setupResult = setup();
+  await setupResult.service.submitEmergencyRequest(draft(), 'requester-user', 'request-1');
+  const baseline = await setupResult.service.getRequestForUpdate('request-1', 'requester-user');
+  const form = { unitsRequired: '3', hospitalName: 'Updated Hospital', hospitalLocation: 'Kandy',
+    requiredDate: baseline.requiredDate, urgencyLevel: 'Critical' };
+  return { ...setupResult, baseline, form };
+}
+
+test('updating changes only the editable fields and preserves patient, owner, status and verification', async () => {
+  const { service, records, baseline, form, state } = await updateFixture();
+  const original = { ...records.get('emergencyRequests/request-1') };
+  await service.updateEmergencyRequest('request-1', 'requester-user', form, baseline);
+  const saved = records.get('emergencyRequests/request-1');
+  assert.equal(saved.unitsRequired, 3);
+  assert.equal(saved.hospitalName, 'Updated Hospital');
+  assert.equal(saved.location, 'Kandy');
+  assert.equal(saved.urgency, 'critical');
+  for (const key of ['patient', 'patientName', 'bloodGroup', 'requesterId', 'status', 'verified', 'createdAt', 'contactName', 'contactPhone']) {
+    assert.deepEqual(saved[key], original[key]);
+  }
+  assert.deepEqual(saved.updatedAt, { serverTimestamp: true });
+  assert.equal(state.writes, 2);
+});
+
+test('updates reject requests that have been verified or closed since loading', async () => {
+  for (const status of ['verified', 'matched', 'completed', 'cancelled', 'rejected', 'closed']) {
+    const { service, records, baseline, form, state } = await updateFixture();
+    records.get('emergencyRequests/request-1').status = status;
+    await assert.rejects(service.updateEmergencyRequest('request-1', 'requester-user', form, baseline), /cannot be edited/);
+    assert.equal(state.writes, 1);
+  }
+  const { service, records, baseline, form, state } = await updateFixture();
+  records.get('emergencyRequests/request-1').verified = true;
+  await assert.rejects(service.updateEmergencyRequest('request-1', 'requester-user', form, baseline), /cannot be edited/);
+  assert.equal(state.writes, 1);
+});
+
+test('concurrent changes to editable fields are not overwritten', async () => {
+  const { service, records, baseline, form, state } = await updateFixture();
+  records.get('emergencyRequests/request-1').unitsRequired = 5;
+  await assert.rejects(service.updateEmergencyRequest('request-1', 'requester-user', form, baseline), /details have changed/);
+  assert.equal(records.get('emergencyRequests/request-1').unitsRequired, 5);
+  assert.equal(state.writes, 1);
+});
+
+test('another requester cannot load or update the record', async () => {
+  const { service, records, baseline, form, state } = await updateFixture();
+  records.get('emergencyRequests/request-1').requesterId = 'other-user';
+  await assert.rejects(service.getRequestForUpdate('request-1', 'requester-user'), /does not belong/);
+  await assert.rejects(service.updateEmergencyRequest('request-1', 'requester-user', form, baseline), /does not belong/);
+  assert.equal(state.writes, 1);
+});
+
+test('invalid units, date and missing hospital details cannot be saved', async () => {
+  const { service, baseline, form, state } = await updateFixture();
+  for (const values of [{ unitsRequired: '0' }, { unitsRequired: '1.5' }, { requiredDate: '2000-01-01' }, { hospitalName: '' }, { hospitalLocation: '' }]) {
+    await assert.rejects(service.updateEmergencyRequest('request-1', 'requester-user', { ...form, ...values }, baseline));
+  }
+  assert.equal(state.writes, 1);
+});
+
+test('a failed update commit preserves the saved request', async () => {
+  const { service, records, baseline, form, state } = await updateFixture();
+  state.failBeforeCommit = true;
+  await assert.rejects(service.updateEmergencyRequest('request-1', 'requester-user', form, baseline));
+  assert.equal(records.get('emergencyRequests/request-1').unitsRequired, 2);
+  assert.equal(state.writes, 1);
+});
+
+test('missing records and mismatched request IDs cannot be updated', async () => {
+  const { service, records, baseline, form, state } = await updateFixture();
+  await assert.rejects(service.updateEmergencyRequest('request-2', 'requester-user', form, baseline), /does not match/);
+  records.delete('emergencyRequests/request-1');
+  await assert.rejects(service.updateEmergencyRequest('request-1', 'requester-user', form, baseline), /could not be found/);
+  assert.equal(state.writes, 1);
 });
