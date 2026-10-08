@@ -25,27 +25,55 @@ import {
   useAuth,
 } from '../features/auth/context/AuthContext';
 
-// Authentication screens
+// ========================================
+// AUTHENTICATION SCREENS
+// ========================================
+
 import SplashScreen from '../features/auth/screens/SplashScreen';
 import LoginScreen from '../features/auth/screens/LoginScreen';
 import RoleSelectionScreen from '../features/auth/screens/RoleSelectionScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
 import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen';
 
-// Donor module
+// ========================================
+// DONOR MODULE
+// ========================================
+
 import DonorNavigator from '../features/donor/navigation/DonorNavigator';
 
-// Other role dashboards
+// ========================================
+// OTHER ROLE DASHBOARDS
+// ========================================
+
 import RequesterDashboardScreen from '../features/emergencyRequest/screens/RequesterDashboardScreen';
+
 import HealthcareDashboardScreen from '../features/verificationMatching/screens/HealthcareDashboardScreen';
+
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
+
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
+
+// ========================================
+// BLOOD BANK REQUEST SCREENS
+// ========================================
+
+import RequestManagementScreen from '../features/bloodBankRequests/screens/RequestManagementScreen';
+
+import RequestApprovalDetailsScreen from '../features/bloodBankRequests/screens/RequestApprovalDetailsScreen';
+
+// ========================================
+// COMMON COMPONENTS
+// ========================================
 
 import RoleAppShell from '../components/RoleAppShell';
 
 import {
   COLORS,
 } from '../constants/colors';
+
+// ========================================
+// AUTH STACK
+// ========================================
 
 const AuthStack =
   createNativeStackNavigator<
@@ -55,7 +83,8 @@ const AuthStack =
 /**
  * Authentication navigation
  *
- * Used only when there is no logged-in Firebase user/profile.
+ * Used only when there is no logged-in
+ * Firebase user/profile.
  */
 function AuthNavigator() {
   return (
@@ -66,6 +95,7 @@ function AuthNavigator() {
         animation: 'slide_from_right',
       }}
     >
+
       <AuthStack.Screen
         name="Login"
         component={LoginScreen}
@@ -85,9 +115,14 @@ function AuthNavigator() {
         name="ForgotPassword"
         component={ForgotPasswordScreen}
       />
+
     </AuthStack.Navigator>
   );
 }
+
+// ========================================
+// DASHBOARD ROUTER
+// ========================================
 
 /**
  * Routes authenticated users according to
@@ -98,6 +133,10 @@ function DashboardRouter() {
     profile,
   } = useAuth();
 
+  // ========================================
+  // PROFILE ERROR
+  // ========================================
+
   if (!profile) {
     return (
       <View
@@ -105,6 +144,7 @@ function DashboardRouter() {
           styles.errorContainer
         }
       >
+
         <Text
           style={
             styles.errorTitle
@@ -122,15 +162,23 @@ function DashboardRouter() {
           profile could not be
           loaded.
         </Text>
+
       </View>
     );
   }
 
+  // ========================================
+  // ROLE ROUTING
+  // ========================================
+
   switch (profile.role) {
+
+    // ======================================
+    // DONOR
+    // ======================================
+
     /**
-     * DONOR
-     *
-     * Donors now have their own complete navigator:
+     * Donors have their own navigator:
      *
      * Dashboard
      * Requests
@@ -139,20 +187,26 @@ function DashboardRouter() {
      * History
      * Profile
      */
+
     case 'donor':
+
       return (
         <DonorNavigator />
       );
 
-    /**
-     * HOSPITAL / REQUESTER
-     */
+    // ======================================
+    // HOSPITAL / REQUESTER
+    // ======================================
+
     case 'requester':
+
       return (
         <RoleAppShell
+
           home={
             <RequesterDashboardScreen />
           }
+
           activity={{
             title:
               'My Requests',
@@ -160,6 +214,7 @@ function DashboardRouter() {
             description:
               'Active and previous emergency requests will be shown here.',
           }}
+
           services={{
             title:
               'Create Request',
@@ -167,6 +222,7 @@ function DashboardRouter() {
             description:
               'The emergency blood request creation flow will be connected here.',
           }}
+
           profile={{
             title:
               'Requester Profile',
@@ -174,6 +230,7 @@ function DashboardRouter() {
             description:
               'Requester account details will be managed here.',
           }}
+
           tabLabels={{
             activity:
               'Requests',
@@ -181,7 +238,9 @@ function DashboardRouter() {
             services:
               'Create',
           }}
+
           tabIcons={{
+
             activity: {
               icon:
                 'document-text-outline',
@@ -197,19 +256,25 @@ function DashboardRouter() {
               activeIcon:
                 'add-circle',
             },
+
           }}
+
         />
       );
 
-    /**
-     * HEALTHCARE STAFF
-     */
+    // ======================================
+    // HEALTHCARE STAFF
+    // ======================================
+
     case 'healthcare':
+
       return (
         <RoleAppShell
+
           home={
             <HealthcareDashboardScreen />
           }
+
           activity={{
             title:
               'Pending Requests',
@@ -217,6 +282,7 @@ function DashboardRouter() {
             description:
               'Requests waiting for healthcare verification will be shown here.',
           }}
+
           services={{
             title:
               'Donor Matching',
@@ -224,6 +290,7 @@ function DashboardRouter() {
             description:
               'Compatible donor matching tools will be connected here.',
           }}
+
           profile={{
             title:
               'Healthcare Profile',
@@ -231,6 +298,7 @@ function DashboardRouter() {
             description:
               'Doctor or nurse account details will be managed here.',
           }}
+
           tabLabels={{
             activity:
               'Pending',
@@ -238,7 +306,9 @@ function DashboardRouter() {
             services:
               'Matches',
           }}
+
           tabIcons={{
+
             activity: {
               icon:
                 'hourglass-outline',
@@ -254,26 +324,55 @@ function DashboardRouter() {
               activeIcon:
                 'people',
             },
+
           }}
+
         />
       );
 
-    /**
-     * BLOOD BANK
-     */
+    // ======================================
+    // BLOOD BANK
+    // ======================================
+
     case 'bloodBank':
+
       return (
         <RoleAppShell
+
+          // --------------------------------
+          // HOME
+          // --------------------------------
+
           home={
             <BloodBankDashboardScreen />
           }
+
+          // --------------------------------
+          // INVENTORY TAB
+          // --------------------------------
+
           activity={{
+
             title:
               'Blood Inventory',
 
             description:
               'Blood stock levels and inventory updates will be connected here.',
+
           }}
+
+          // --------------------------------
+          // REQUESTS TAB
+          // --------------------------------
+          //
+          // IMPORTANT:
+          //
+          // This will be changed to the actual
+          // RequestManagementScreen after we
+          // update RoleAppShell in Step 2.
+          //
+          // --------------------------------
+
           services={{
             title:
               'Emergency Requests',
@@ -281,49 +380,79 @@ function DashboardRouter() {
             description:
               'Blood-bank emergency request management will be connected here.',
           }}
+
+          // --------------------------------
+          // PROFILE TAB
+          // --------------------------------
+
           profile={{
+
             title:
               'Blood Bank Profile',
 
             description:
               'Blood-bank account details will be managed here.',
+
           }}
+
+          // --------------------------------
+          // TAB LABELS
+          // --------------------------------
+
           tabLabels={{
+
             activity:
               'Inventory',
 
             services:
               'Requests',
+
           }}
+
+          // --------------------------------
+          // TAB ICONS
+          // --------------------------------
+
           tabIcons={{
+
             activity: {
+
               icon:
                 'water-outline',
 
               activeIcon:
                 'water',
+
             },
 
             services: {
+
               icon:
                 'alert-outline',
 
               activeIcon:
                 'alert',
+
             },
+
           }}
+
         />
       );
 
-    /**
-     * ADMIN
-     */
+    // ======================================
+    // ADMIN
+    // ======================================
+
     case 'admin':
+
       return (
         <RoleAppShell
+
           home={
             <AdminDashboardScreen />
           }
+
           activity={{
             title:
               'User Management',
@@ -331,6 +460,7 @@ function DashboardRouter() {
             description:
               'Registered users and account statuses will be managed here.',
           }}
+
           services={{
             title:
               'System Management',
@@ -338,6 +468,7 @@ function DashboardRouter() {
             description:
               'Administration tools and system monitoring will be connected here.',
           }}
+
           profile={{
             title:
               'Admin Profile',
@@ -345,6 +476,7 @@ function DashboardRouter() {
             description:
               'Administrator account details will be managed here.',
           }}
+
           tabLabels={{
             activity:
               'Users',
@@ -352,33 +484,47 @@ function DashboardRouter() {
             services:
               'Manage',
           }}
+
           tabIcons={{
+
             activity: {
+
               icon:
                 'people-outline',
 
               activeIcon:
                 'people',
+
             },
 
             services: {
+
               icon:
                 'settings-outline',
 
               activeIcon:
                 'settings',
+
             },
+
           }}
+
         />
       );
 
+    // ======================================
+    // INVALID ROLE
+    // ======================================
+
     default:
+
       return (
         <View
           style={
             styles.errorContainer
           }
         >
+
           <Text
             style={
               styles.errorTitle
@@ -396,15 +542,21 @@ function DashboardRouter() {
             have a valid
             BloodConnect role.
           </Text>
+
         </View>
       );
   }
 }
 
+// ========================================
+// ROOT NAVIGATOR
+// ========================================
+
 /**
  * Main application navigation.
  */
 export default function RootNavigator() {
+
   const {
     user,
     profile,
@@ -416,50 +568,80 @@ export default function RootNavigator() {
     setSplashFinished,
   ] = useState(false);
 
+  // ========================================
+  // SPLASH TIMER
+  // ========================================
+
   useEffect(() => {
+
     const timer =
       setTimeout(() => {
+
         setSplashFinished(
           true,
         );
+
       }, 2500);
 
     return () => {
+
       clearTimeout(
         timer,
       );
+
     };
+
   }, []);
 
-  /*
-   * Keep splash visible:
-   *
-   * 1. for at least 2.5 seconds
-   * 2. while Firebase checks login state
-   */
+  // ========================================
+  // KEEP SPLASH VISIBLE
+  // ========================================
+  //
+  // 1. At least 2.5 seconds
+  // 2. While Firebase checks login
+  //
+  // ========================================
+
   if (
     initializing ||
     !splashFinished
   ) {
+
     return (
       <SplashScreen />
     );
   }
 
+  // ========================================
+  // MAIN NAVIGATION
+  // ========================================
+
   return (
     <NavigationContainer>
+
       {user && profile ? (
+
         <DashboardRouter />
+
       ) : (
+
         <AuthNavigator />
+
       )}
+
     </NavigationContainer>
   );
 }
 
+// ========================================
+// STYLES
+// ========================================
+
 const styles =
   StyleSheet.create({
+
     errorContainer: {
+
       flex: 1,
 
       justifyContent:
@@ -473,9 +655,11 @@ const styles =
 
       backgroundColor:
         COLORS.background,
+
     },
 
     errorTitle: {
+
       fontSize: 22,
 
       fontWeight:
@@ -486,9 +670,11 @@ const styles =
 
       textAlign:
         'center',
+
     },
 
     errorMessage: {
+
       marginTop: 10,
 
       fontSize: 14,
@@ -500,5 +686,7 @@ const styles =
 
       textAlign:
         'center',
+
     },
+
   });
