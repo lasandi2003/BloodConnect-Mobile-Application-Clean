@@ -47,6 +47,10 @@ const BLOOD_GROUPS = [
 export default function AddStockScreen({
   onBack,
 }: Props) {
+  // ========================================
+  // STATE
+  // ========================================
+
   const [inventory, setInventory] =
     useState<BloodInventoryItem[]>([]);
 
@@ -80,6 +84,10 @@ export default function AddStockScreen({
   const [saving, setSaving] =
     useState(false);
 
+  // ========================================
+  // LOAD INVENTORY
+  // ========================================
+
   useEffect(() => {
     loadInventory();
   }, []);
@@ -99,33 +107,37 @@ export default function AddStockScreen({
     }
   }
 
-  // --------------------------------
+  // ========================================
   // DATE FORMAT
-  // --------------------------------
+  // ========================================
 
-  function formatDate(date: Date | null) {
+  function formatDate(
+    date: Date | null
+  ) {
     if (!date) {
       return '';
     }
-
-    const day = String(
-      date.getDate()
-    ).padStart(2, '0');
 
     const month = String(
       date.getMonth() + 1
     ).padStart(2, '0');
 
+    const day = String(
+      date.getDate()
+    ).padStart(2, '0');
+
     const year = date.getFullYear();
 
-    return `${day} / ${month} / ${year}`;
+    return `${month} / ${day} / ${year}`;
   }
 
-  // --------------------------------
-  // WEB DATE VALUE
-  // --------------------------------
+  // ========================================
+  // WEB DATE FORMAT
+  // ========================================
 
-  function formatDateForWeb(date: Date | null) {
+  function formatDateForWeb(
+    date: Date | null
+  ) {
     if (!date) {
       return '';
     }
@@ -169,9 +181,9 @@ export default function AddStockScreen({
     return date;
   }
 
-  // --------------------------------
-  // SELECTED BLOOD
-  // --------------------------------
+  // ========================================
+  // SELECTED BLOOD GROUP
+  // ========================================
 
   const selectedBlood =
     inventory.find(
@@ -188,9 +200,9 @@ export default function AddStockScreen({
   const newTotal =
     currentUnits + quantityNumber;
 
-  // --------------------------------
+  // ========================================
   // SAVE STOCK
-  // --------------------------------
+  // ========================================
 
   async function handleSaveStock() {
     if (!bloodGroup) {
@@ -198,14 +210,19 @@ export default function AddStockScreen({
         'Required',
         'Please select a blood group.'
       );
+
       return;
     }
 
-    if (!quantity || quantityNumber <= 0) {
+    if (
+      !quantity ||
+      quantityNumber <= 0
+    ) {
       Alert.alert(
         'Required',
         'Please enter a valid quantity.'
       );
+
       return;
     }
 
@@ -214,6 +231,7 @@ export default function AddStockScreen({
         'Required',
         'Please select the collection date.'
       );
+
       return;
     }
 
@@ -222,14 +240,18 @@ export default function AddStockScreen({
         'Required',
         'Please select the expiry date.'
       );
+
       return;
     }
 
-    if (expiryDate <= collectionDate) {
+    if (
+      expiryDate <= collectionDate
+    ) {
       Alert.alert(
         'Invalid Date',
         'Expiry date must be after the collection date.'
       );
+
       return;
     }
 
@@ -238,6 +260,7 @@ export default function AddStockScreen({
         'Required',
         'Please enter the donor or source details.'
       );
+
       return;
     }
 
@@ -246,6 +269,7 @@ export default function AddStockScreen({
         'Blood Group Not Found',
         'This blood group does not exist in the inventory.'
       );
+
       return;
     }
 
@@ -259,23 +283,14 @@ export default function AddStockScreen({
 
       setSaving(false);
 
-      /*
-       * Automatically return to
-       * Blood Inventory.
-       */
       onBack();
 
-      /*
-       * Show success message after
-       * returning to inventory.
-       */
       setTimeout(() => {
         Alert.alert(
           'Stock Added',
           `${quantityNumber} units of ${bloodGroup} have been added successfully.`
         );
       }, 300);
-
     } catch (error) {
       setSaving(false);
 
@@ -291,65 +306,74 @@ export default function AddStockScreen({
     }
   }
 
-  // --------------------------------
+  // ========================================
   // WEB COLLECTION DATE
-  // --------------------------------
+  // ========================================
 
   function renderWebCollectionDate() {
     if (Platform.OS !== 'web') {
       return null;
     }
 
-    return React.createElement('input', {
-      type: 'date',
-      value: formatDateForWeb(
-        collectionDate
-      ),
-      max: formatDateForWeb(
-        new Date(
-          new Date().setFullYear(
-            new Date().getFullYear() + 1
-          )
-        )
-      ),
-      onChange: (
-        event: any
-      ) => {
-        const selectedDate =
-          parseWebDate(
-            event.target.value
-          );
+    return React.createElement(
+      'input',
+      {
+        type: 'date',
 
-        if (selectedDate) {
-          setCollectionDate(
-            selectedDate
-          );
+        value:
+          formatDateForWeb(
+            collectionDate
+          ),
 
-          if (
-            expiryDate &&
-            selectedDate >= expiryDate
-          ) {
-            setExpiryDate(null);
+        max:
+          formatDateForWeb(
+            new Date(
+              new Date().setFullYear(
+                new Date().getFullYear() + 1
+              )
+            )
+          ),
+
+        onChange: (
+          event: any
+        ) => {
+          const selectedDate =
+            parseWebDate(
+              event.target.value
+            );
+
+          if (selectedDate) {
+            setCollectionDate(
+              selectedDate
+            );
+
+            if (
+              expiryDate &&
+              selectedDate >= expiryDate
+            ) {
+              setExpiryDate(null);
+            }
           }
-        }
-      },
-      style: {
-        flex: 1,
-        marginLeft: 8,
-        height: 40,
-        border: 'none',
-        outline: 'none',
-        backgroundColor: 'transparent',
-        color: '#1F1F1F',
-        fontSize: 13,
-        fontWeight: 600,
-      },
-    });
+        },
+
+        style: {
+          flex: 1,
+          marginLeft: 8,
+          height: 34,
+          border: 'none',
+          outline: 'none',
+          backgroundColor: 'transparent',
+          color: '#222222',
+          fontSize: 13,
+          fontWeight: 600,
+        },
+      }
+    );
   }
 
-  // --------------------------------
+  // ========================================
   // WEB EXPIRY DATE
-  // --------------------------------
+  // ========================================
 
   function renderWebExpiryDate() {
     if (Platform.OS !== 'web') {
@@ -360,50 +384,68 @@ export default function AddStockScreen({
       collectionDate
         ? new Date(
             collectionDate.getTime() +
-              24 * 60 * 60 * 1000
+              24 *
+                60 *
+                60 *
+                1000
           )
         : new Date();
 
-    return React.createElement('input', {
-      type: 'date',
-      value: formatDateForWeb(
-        expiryDate
-      ),
-      min: formatDateForWeb(
-        minimumDate
-      ),
-      onChange: (
-        event: any
-      ) => {
-        const selectedDate =
-          parseWebDate(
-            event.target.value
-          );
+    return React.createElement(
+      'input',
+      {
+        type: 'date',
 
-        if (selectedDate) {
-          setExpiryDate(
-            selectedDate
-          );
-        }
-      },
-      style: {
-        flex: 1,
-        marginLeft: 8,
-        height: 40,
-        border: 'none',
-        outline: 'none',
-        backgroundColor: 'transparent',
-        color: '#1F1F1F',
-        fontSize: 13,
-        fontWeight: 600,
-      },
-    });
+        value:
+          formatDateForWeb(
+            expiryDate
+          ),
+
+        min:
+          formatDateForWeb(
+            minimumDate
+          ),
+
+        onChange: (
+          event: any
+        ) => {
+          const selectedDate =
+            parseWebDate(
+              event.target.value
+            );
+
+          if (selectedDate) {
+            setExpiryDate(
+              selectedDate
+            );
+          }
+        },
+
+        style: {
+          flex: 1,
+          marginLeft: 8,
+          height: 34,
+          border: 'none',
+          outline: 'none',
+          backgroundColor: 'transparent',
+          color: '#222222',
+          fontSize: 13,
+          fontWeight: 600,
+        },
+      }
+    );
   }
+
+  // ========================================
+  // UI
+  // ========================================
 
   return (
     <View style={styles.container}>
 
-      {/* HEADER */}
+      {/* =====================================
+          HEADER
+      ====================================== */}
 
       <View style={styles.header}>
 
@@ -414,18 +456,22 @@ export default function AddStockScreen({
         >
           <Ionicons
             name="arrow-back"
-            size={22}
+            size={21}
             color={COLORS.text}
           />
         </Pressable>
 
         <View style={styles.headerText}>
 
-          <Text style={styles.headerTitle}>
+          <Text
+            style={styles.headerTitle}
+          >
             Add Blood Stock
           </Text>
 
-          <Text style={styles.headerSubtitle}>
+          <Text
+            style={styles.headerSubtitle}
+          >
             Enter details of new blood donation
           </Text>
 
@@ -433,21 +479,26 @@ export default function AddStockScreen({
 
       </View>
 
-      {/* CONTENT */}
+      {/* =====================================
+          FORM
+      ====================================== */}
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={
           styles.scrollContent
         }
+        keyboardShouldPersistTaps="handled"
       >
 
-        {/* BLOOD GROUP */}
+        {/* =====================================
+            BLOOD GROUP
+        ====================================== */}
 
         <Text style={styles.label}>
           Blood group
           <Text style={styles.required}>
-            {' '}*
+            *
           </Text>
         </Text>
 
@@ -460,7 +511,9 @@ export default function AddStockScreen({
           }
         >
 
-          <View style={styles.selectLeft}>
+          <View
+            style={styles.fieldLeft}
+          >
 
             <Ionicons
               name="water-outline"
@@ -487,16 +540,20 @@ export default function AddStockScreen({
                 ? 'chevron-up'
                 : 'chevron-down'
             }
-            size={20}
-            color={COLORS.textSecondary}
+            size={19}
+            color="#555555"
           />
 
         </Pressable>
 
-        {/* BLOOD GROUP DROPDOWN */}
+        {/* =====================================
+            BLOOD GROUP DROPDOWN
+        ====================================== */}
 
         {showBloodGroups && (
-          <View style={styles.dropdown}>
+          <View
+            style={styles.dropdown}
+          >
 
             {BLOOD_GROUPS.map(
               group => (
@@ -504,7 +561,8 @@ export default function AddStockScreen({
                   key={group}
                   style={[
                     styles.dropdownItem,
-                    bloodGroup === group &&
+                    bloodGroup ===
+                      group &&
                       styles.selectedDropdownItem,
                   ]}
                   onPress={() => {
@@ -547,23 +605,25 @@ export default function AddStockScreen({
           </View>
         )}
 
-        {/* QUANTITY */}
+        {/* =====================================
+            QUANTITY
+        ====================================== */}
 
         <Text style={styles.label}>
           Quantity (Units)
           <Text style={styles.required}>
-            {' '}*
+            *
           </Text>
         </Text>
 
-        <View style={styles.inputBox}>
+        <View
+          style={styles.inputBox}
+        >
 
           <Ionicons
             name="cube-outline"
             size={18}
-            color={
-              COLORS.textSecondary
-            }
+            color="#777777"
           />
 
           <TextInput
@@ -577,37 +637,42 @@ export default function AddStockScreen({
               )
             }
             placeholder="Enter quantity"
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor="#9A9A9A"
             keyboardType="numeric"
             style={styles.input}
           />
 
         </View>
 
-        {/* COLLECTION DATE */}
+        {/* =====================================
+            COLLECTION DATE
+        ====================================== */}
 
         <Text style={styles.label}>
           Collection Date
           <Text style={styles.required}>
-            {' '}*
+            *
           </Text>
         </Text>
 
         {Platform.OS === 'web' ? (
-          <View style={styles.inputBox}>
+
+          <View
+            style={styles.inputBox}
+          >
 
             <Ionicons
               name="calendar-outline"
               size={18}
-              color={
-                COLORS.textSecondary
-              }
+              color="#777777"
             />
 
             {renderWebCollectionDate()}
 
           </View>
+
         ) : (
+
           <>
             <Pressable
               style={styles.inputBox}
@@ -621,9 +686,7 @@ export default function AddStockScreen({
               <Ionicons
                 name="calendar-outline"
                 size={18}
-                color={
-                  COLORS.textSecondary
-                }
+                color="#777777"
               />
 
               <Text
@@ -637,8 +700,14 @@ export default function AddStockScreen({
                   ? formatDate(
                       collectionDate
                     )
-                  : 'Select collection date'}
+                  : 'mm / dd / yyyy'}
               </Text>
+
+              <Ionicons
+                name="calendar-outline"
+                size={17}
+                color="#777777"
+              />
 
             </Pressable>
 
@@ -686,42 +755,51 @@ export default function AddStockScreen({
                 }}
               />
             )}
+
           </>
+
         )}
 
-        {/* EXPIRY DATE */}
+        {/* =====================================
+            EXPIRY DATE
+        ====================================== */}
 
         <Text style={styles.label}>
           Expiry Date
           <Text style={styles.required}>
-            {' '}*
+            *
           </Text>
         </Text>
 
         {Platform.OS === 'web' ? (
-          <View style={styles.inputBox}>
+
+          <View
+            style={styles.inputBox}
+          >
 
             <Ionicons
               name="calendar-outline"
               size={18}
-              color={
-                COLORS.textSecondary
-              }
+              color="#777777"
             />
 
             {renderWebExpiryDate()}
 
           </View>
+
         ) : (
+
           <>
             <Pressable
               style={styles.inputBox}
               onPress={() => {
+
                 if (!collectionDate) {
                   Alert.alert(
                     'Collection Date Required',
                     'Please select the collection date first.'
                   );
+
                   return;
                 }
 
@@ -734,9 +812,7 @@ export default function AddStockScreen({
               <Ionicons
                 name="calendar-outline"
                 size={18}
-                color={
-                  COLORS.textSecondary
-                }
+                color="#777777"
               />
 
               <Text
@@ -750,8 +826,14 @@ export default function AddStockScreen({
                   ? formatDate(
                       expiryDate
                     )
-                  : 'Select expiry date'}
+                  : 'mm / dd / yyyy'}
               </Text>
+
+              <Ionicons
+                name="calendar-outline"
+                size={17}
+                color="#777777"
+              />
 
             </Pressable>
 
@@ -800,26 +882,30 @@ export default function AddStockScreen({
                 }}
               />
             )}
+
           </>
+
         )}
 
-        {/* DONOR / SOURCE */}
+        {/* =====================================
+            DONOR / SOURCE
+        ====================================== */}
 
         <Text style={styles.label}>
           Donor / Source Details
           <Text style={styles.required}>
-            {' '}*
+            *
           </Text>
         </Text>
 
-        <View style={styles.inputBox}>
+        <View
+          style={styles.inputBox}
+        >
 
           <Ionicons
             name="person-outline"
             size={18}
-            color={
-              COLORS.textSecondary
-            }
+            color="#777777"
           />
 
           <TextInput
@@ -828,13 +914,15 @@ export default function AddStockScreen({
               setDonorSource
             }
             placeholder="Enter donor name / source"
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor="#9A9A9A"
             style={styles.input}
           />
 
         </View>
 
-        {/* NOTES */}
+        {/* =====================================
+            NOTES
+        ====================================== */}
 
         <Text style={styles.label}>
           Notes (Optional)
@@ -850,16 +938,14 @@ export default function AddStockScreen({
           <Ionicons
             name="document-text-outline"
             size={18}
-            color={
-              COLORS.textSecondary
-            }
+            color="#777777"
           />
 
           <TextInput
             value={notes}
             onChangeText={setNotes}
             placeholder="Enter additional notes"
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor="#9A9A9A"
             style={[
               styles.input,
               styles.notesInput,
@@ -869,123 +955,26 @@ export default function AddStockScreen({
 
         </View>
 
-        {/* STOCK SUMMARY */}
+        {/* =====================================
+            BUTTONS
+        ====================================== */}
 
-        {bloodGroup &&
-          quantity && (
-            <View
-              style={
-                styles.previewCard
-              }
-            >
-
-              <Text
-                style={
-                  styles.previewTitle
-                }
-              >
-                Stock Summary
-              </Text>
-
-              <View
-                style={
-                  styles.previewRow
-                }
-              >
-
-                <Text
-                  style={
-                    styles.previewLabel
-                  }
-                >
-                  Current units
-                </Text>
-
-                <Text
-                  style={
-                    styles.previewValue
-                  }
-                >
-                  {currentUnits}
-                </Text>
-
-              </View>
-
-              <View
-                style={
-                  styles.previewRow
-                }
-              >
-
-                <Text
-                  style={
-                    styles.previewLabel
-                  }
-                >
-                  Units to add
-                </Text>
-
-                <Text
-                  style={
-                    styles.previewValue
-                  }
-                >
-                  +{quantityNumber}
-                </Text>
-
-              </View>
-
-              <View
-                style={
-                  styles.previewDivider
-                }
-              />
-
-              <View
-                style={
-                  styles.previewRow
-                }
-              >
-
-                <Text
-                  style={
-                    styles.totalLabel
-                  }
-                >
-                  New total units
-                </Text>
-
-                <Text
-                  style={
-                    styles.totalValue
-                  }
-                >
-                  {newTotal}
-                </Text>
-
-              </View>
-
-            </View>
-          )}
-
-        {/* BUTTONS */}
-
-        <View style={styles.buttonRow}>
+        <View
+          style={styles.buttonRow}
+        >
 
           <Pressable
-            style={
-              styles.cancelButton
-            }
+            style={styles.cancelButton}
             onPress={onBack}
             disabled={saving}
           >
+
             <Text
-              style={
-                styles.cancelText
-              }
+              style={styles.cancelText}
             >
               Cancel
             </Text>
+
           </Pressable>
 
           <Pressable
@@ -1002,16 +991,12 @@ export default function AddStockScreen({
 
             <Ionicons
               name="checkmark-circle-outline"
-              size={19}
-              color={
-                COLORS.white
-              }
+              size={18}
+              color={COLORS.white}
             />
 
             <Text
-              style={
-                styles.saveText
-              }
+              style={styles.saveText}
             >
               {saving
                 ? 'Saving...'
@@ -1028,11 +1013,24 @@ export default function AddStockScreen({
   );
 }
 
+// ========================================
+// STYLES
+// ========================================
+
 const styles = StyleSheet.create({
+
+  // ======================================
+  // CONTAINER
+  // ======================================
+
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
+
+  // ======================================
+  // HEADER
+  // ======================================
 
   header: {
     flexDirection: 'row',
@@ -1042,15 +1040,14 @@ const styles = StyleSheet.create({
     paddingBottom: 15,
     backgroundColor: COLORS.white,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#E7E7E7',
   },
 
   backButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor:
-      COLORS.primaryLight,
+    backgroundColor: COLORS.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -1069,11 +1066,16 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     marginTop: 3,
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: '#777777',
   },
 
+  // ======================================
+  // FORM
+  // ======================================
+
   scrollContent: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 20,
     paddingBottom: 35,
   },
 
@@ -1086,7 +1088,12 @@ const styles = StyleSheet.create({
 
   required: {
     color: COLORS.primary,
+    fontWeight: '800',
   },
+
+  // ======================================
+  // SELECT
+  // ======================================
 
   selectBox: {
     height: 47,
@@ -1101,13 +1108,14 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
-  selectLeft: {
+  fieldLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    flex: 1,
   },
 
   selectText: {
+    marginLeft: 9,
     fontSize: 13,
     fontWeight: '600',
     color: COLORS.text,
@@ -1118,19 +1126,23 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
 
+  // ======================================
+  // DROPDOWN
+  // ======================================
+
   dropdown: {
     backgroundColor: COLORS.white,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 8,
     marginTop: -8,
     marginBottom: 15,
     overflow: 'hidden',
   },
 
   dropdownItem: {
-    minHeight: 43,
-    paddingHorizontal: 14,
+    minHeight: 42,
+    paddingHorizontal: 13,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1139,7 +1151,7 @@ const styles = StyleSheet.create({
   },
 
   selectedDropdownItem: {
-    backgroundColor: '#FFF3F3',
+    backgroundColor: '#FFF1F1',
   },
 
   dropdownText: {
@@ -1152,6 +1164,10 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '800',
   },
+
+  // ======================================
+  // INPUT
+  // ======================================
 
   inputBox: {
     minHeight: 47,
@@ -1173,6 +1189,10 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
 
+  // ======================================
+  // DATE
+  // ======================================
+
   dateText: {
     flex: 1,
     marginLeft: 8,
@@ -1181,73 +1201,29 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
 
+  // ======================================
+  // NOTES
+  // ======================================
+
   notesBox: {
-    minHeight: 58,
+    minHeight: 70,
     alignItems: 'flex-start',
     paddingTop: 12,
   },
 
   notesInput: {
-    minHeight: 35,
+    minHeight: 45,
     textAlignVertical: 'top',
   },
 
-  previewCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 14,
-    marginBottom: 15,
-  },
-
-  previewTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: COLORS.text,
-    marginBottom: 10,
-  },
-
-  previewRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-
-  previewLabel: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-
-  previewValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-
-  previewDivider: {
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 7,
-  },
-
-  totalLabel: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-
-  totalValue: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: COLORS.primary,
-  },
+  // ======================================
+  // BUTTONS
+  // ======================================
 
   buttonRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 5,
+    marginTop: 8,
   },
 
   cancelButton: {
@@ -1285,4 +1261,5 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: COLORS.white,
   },
+
 });

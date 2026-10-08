@@ -6,6 +6,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,11 +41,8 @@ import {
 } from '../../auth/context/AuthContext';
 
 import DonorScreenShell from '../components/DonorScreenShell';
-
 import DonorBottomNav from '../components/DonorBottomNav';
-
 import RequestCard from '../components/RequestCard';
-
 import StatCard from '../components/StatCard';
 
 import type {
@@ -71,51 +69,57 @@ type Navigation =
 
 export default function DonorDashboardScreen() {
   const navigation =
-    useNavigation<
-      Navigation
-    >();
+    useNavigation<Navigation>();
 
   const {
-    profile:
-      authProfile,
+    profile: authProfile,
     logout,
   } = useAuth();
 
   const [
     donor,
     setDonor,
-  ] =
-    useState<
-      DonorProfile | null
-    >(null);
+  ] = useState<DonorProfile | null>(
+    null,
+  );
 
   const [
     requests,
     setRequests,
-  ] =
-    useState<
-      EmergencyRequest[]
-    >([]);
+  ] = useState<EmergencyRequest[]>(
+    [],
+  );
 
   const [
     responses,
     setResponses,
-  ] =
-    useState<
-      DonorResponse[]
-    >([]);
+  ] = useState<DonorResponse[]>(
+    [],
+  );
 
   const [
     loading,
     setLoading,
-  ] =
-    useState(true);
+  ] = useState(true);
 
   const [
     updatingAvailability,
     setUpdatingAvailability,
-  ] =
-    useState(false);
+  ] = useState(false);
+
+  const [
+    loggingOut,
+    setLoggingOut,
+  ] = useState(false);
+
+  const [
+    logoutModalVisible,
+    setLogoutModalVisible,
+  ] = useState(false);
+
+  // ==========================================
+  // LOAD DASHBOARD
+  // ==========================================
 
   const loadDashboard =
     useCallback(
@@ -128,9 +132,7 @@ export default function DonorDashboardScreen() {
         }
 
         try {
-          setLoading(
-            true,
-          );
+          setLoading(true);
 
           const donorData =
             await getDonorProfile(
@@ -165,9 +167,7 @@ export default function DonorDashboardScreen() {
           } else {
             setRequests([]);
           }
-        } catch (
-          error
-        ) {
+        } catch (error) {
           console.error(
             'Dashboard load error:',
             error,
@@ -178,19 +178,21 @@ export default function DonorDashboardScreen() {
             'We could not load your donor information. Please try again.',
           );
         } finally {
-          setLoading(
-            false,
-          );
+          setLoading(false);
         }
       },
       [],
     );
 
   useFocusEffect(
-  useCallback(() => {
-    void loadDashboard();
-  }, [loadDashboard]),
-);
+    useCallback(() => {
+      void loadDashboard();
+    }, [loadDashboard]),
+  );
+
+  // ==========================================
+  // UPDATE DONOR AVAILABILITY
+  // ==========================================
 
   async function toggleAvailability(
     value: boolean,
@@ -205,6 +207,9 @@ export default function DonorDashboardScreen() {
       return;
     }
 
+    const previousValue =
+      donor.isAvailable;
+
     try {
       setUpdatingAvailability(
         true,
@@ -212,9 +217,7 @@ export default function DonorDashboardScreen() {
 
       setDonor({
         ...donor,
-
-        isAvailable:
-          value,
+        isAvailable: value,
       });
 
       await updateDonorAvailability(
@@ -237,17 +240,21 @@ export default function DonorDashboardScreen() {
       } else {
         setRequests([]);
       }
-    } catch {
+    } catch (error) {
+      console.error(
+        'Availability update error:',
+        error,
+      );
+
       setDonor({
         ...donor,
-
         isAvailable:
-          !value,
+          previousValue,
       });
 
       Alert.alert(
         'Update failed',
-        'Your availability could not be updated.',
+        'Your availability could not be updated. Please try again.',
       );
     } finally {
       setUpdatingAvailability(
@@ -256,34 +263,57 @@ export default function DonorDashboardScreen() {
     }
   }
 
+  // ==========================================
+  // LOGOUT
+  // ==========================================
+
   function handleLogout() {
-    Alert.alert(
-      'Sign out',
-      'Are you sure you want to sign out?',
-      [
-        {
-          text:
-            'Cancel',
-
-          style:
-            'cancel',
-        },
-
-        {
-          text:
-            'Sign Out',
-
-          style:
-            'destructive',
-
-          onPress:
-            async () => {
-              await logout();
-            },
-        },
-      ],
+    setLogoutModalVisible(
+      true,
     );
   }
+
+  function cancelLogout() {
+    if (loggingOut) {
+      return;
+    }
+
+    setLogoutModalVisible(
+      false,
+    );
+  }
+
+  async function performLogout() {
+    if (loggingOut) {
+      return;
+    }
+
+    try {
+      setLoggingOut(true);
+
+      await logout();
+
+      setLogoutModalVisible(
+        false,
+      );
+    } catch (error) {
+      console.error(
+        'Donor logout error:',
+        error,
+      );
+
+      Alert.alert(
+        'Sign out failed',
+        'Unable to sign out. Please try again.',
+      );
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
+  // ==========================================
+  // DASHBOARD STATISTICS
+  // ==========================================
 
   const completed =
     responses.filter(
@@ -306,12 +336,14 @@ export default function DonorDashboardScreen() {
     authProfile?.fullName ||
     'Donor';
 
+  // ==========================================
+  // UI
+  // ==========================================
+
   return (
     <DonorScreenShell>
       <View
-        style={
-          styles.screen
-        }
+        style={styles.screen}
       >
         <ScrollView
           contentContainerStyle={
@@ -321,10 +353,10 @@ export default function DonorDashboardScreen() {
             false
           }
         >
+          {/* HEADER */}
+
           <View
-            style={
-              styles.header
-            }
+            style={styles.header}
           >
             <View
               style={
@@ -343,13 +375,9 @@ export default function DonorDashboardScreen() {
                 style={
                   styles.name
                 }
-                numberOfLines={
-                  1
-                }
+                numberOfLines={1}
               >
-                {
-                  displayName
-                }
+                {displayName}
               </Text>
             </View>
 
@@ -357,19 +385,40 @@ export default function DonorDashboardScreen() {
               onPress={
                 handleLogout
               }
-              style={
-                styles.logout
+              disabled={
+                loggingOut
               }
+              hitSlop={10}
+              style={({
+                pressed,
+              }) => [
+                styles.logout,
+                pressed &&
+                  styles.logoutPressed,
+                loggingOut &&
+                  styles.logoutDisabled,
+              ]}
             >
-              <Ionicons
-                name="log-out-outline"
-                size={21}
-                color={
-                  COLORS.primary
-                }
-              />
+              {loggingOut ? (
+                <ActivityIndicator
+                  size="small"
+                  color={
+                    COLORS.primary
+                  }
+                />
+              ) : (
+                <Ionicons
+                  name="log-out-outline"
+                  size={21}
+                  color={
+                    COLORS.primary
+                  }
+                />
+              )}
             </Pressable>
           </View>
+
+          {/* LOADING */}
 
           {loading ? (
             <View
@@ -394,6 +443,8 @@ export default function DonorDashboardScreen() {
             </View>
           ) : (
             <>
+              {/* COMPLETE PROFILE WARNING */}
+
               {!donor?.profileCompleted && (
                 <Pressable
                   style={
@@ -450,6 +501,8 @@ export default function DonorDashboardScreen() {
                   />
                 </Pressable>
               )}
+
+              {/* ACTIVE DONOR CARD */}
 
               <View
                 style={
@@ -511,7 +564,6 @@ export default function DonorDashboardScreen() {
                   trackColor={{
                     false:
                       '#D6D6D6',
-
                     true:
                       '#8EC5A6',
                   }}
@@ -523,22 +575,18 @@ export default function DonorDashboardScreen() {
                 />
               </View>
 
+              {/* STATISTICS */}
+
               <View
-                style={
-                  styles.stats
-                }
+                style={styles.stats}
               >
                 <StatCard
-                  value={
-                    completed
-                  }
+                  value={completed}
                   label="Donations"
                 />
 
                 <StatCard
-                  value={
-                    accepted
-                  }
+                  value={accepted}
                   label="Accepted"
                 />
 
@@ -549,6 +597,8 @@ export default function DonorDashboardScreen() {
                   label="Responses"
                 />
               </View>
+
+              {/* EMERGENCY REQUESTS */}
 
               <View
                 style={
@@ -579,6 +629,8 @@ export default function DonorDashboardScreen() {
                   </Text>
                 </Pressable>
               </View>
+
+              {/* NO BLOOD GROUP */}
 
               {!donor?.bloodGroup ? (
                 <View
@@ -725,6 +777,126 @@ export default function DonorDashboardScreen() {
         <DonorBottomNav
           active="Home"
         />
+
+        {/* LOGOUT CONFIRMATION MODAL */}
+
+        <Modal
+          visible={
+            logoutModalVisible
+          }
+          transparent
+          animationType="fade"
+          onRequestClose={
+            cancelLogout
+          }
+        >
+          <View
+            style={
+              styles.modalOverlay
+            }
+          >
+            <View
+              style={
+                styles.modalCard
+              }
+            >
+              <View
+                style={
+                  styles.modalIcon
+                }
+              >
+                <Ionicons
+                  name="log-out-outline"
+                  size={30}
+                  color={
+                    COLORS.primary
+                  }
+                />
+              </View>
+
+              <Text
+                style={
+                  styles.modalTitle
+                }
+              >
+                Sign Out
+              </Text>
+
+              <Text
+                style={
+                  styles.modalMessage
+                }
+              >
+                Are you sure you want to sign out of BloodConnect?
+              </Text>
+
+              <View
+                style={
+                  styles.modalButtons
+                }
+              >
+                <Pressable
+                  onPress={
+                    cancelLogout
+                  }
+                  disabled={
+                    loggingOut
+                  }
+                  style={({
+                    pressed,
+                  }) => [
+                    styles.cancelButton,
+                    pressed &&
+                      styles.buttonPressed,
+                  ]}
+                >
+                  <Text
+                    style={
+                      styles.cancelButtonText
+                    }
+                  >
+                    Cancel
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => {
+                    void performLogout();
+                  }}
+                  disabled={
+                    loggingOut
+                  }
+                  style={({
+                    pressed,
+                  }) => [
+                    styles.signOutButton,
+                    pressed &&
+                      styles.buttonPressed,
+                    loggingOut &&
+                      styles.logoutDisabled,
+                  ]}
+                >
+                  {loggingOut ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={
+                        COLORS.white
+                      }
+                    />
+                  ) : (
+                    <Text
+                      style={
+                        styles.signOutButtonText
+                      }
+                    >
+                      Sign Out
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </DonorScreenShell>
   );
@@ -737,56 +909,41 @@ const styles =
     },
 
     content: {
-      paddingHorizontal:
-        18,
-
+      paddingHorizontal: 18,
       paddingTop: 12,
-
       paddingBottom: 30,
     },
 
+    // HEADER
+
     header: {
-      flexDirection:
-        'row',
-
-      alignItems:
-        'center',
-
-      marginBottom:
-        17,
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 17,
     },
 
     headerText: {
       flex: 1,
-
       paddingRight: 10,
     },
 
     welcome: {
       fontSize: 12,
-
       color:
         COLORS.textSecondary,
     },
 
     name: {
       marginTop: 2,
-
       fontSize: 19,
-
-      fontWeight:
-        '900',
-
-      color:
-        COLORS.text,
+      fontWeight: '900',
+      color: COLORS.text,
     },
 
     logout: {
       width: 43,
       height: 43,
-
-      borderRadius:
-        22,
+      borderRadius: 22,
 
       backgroundColor:
         COLORS.primaryLight,
@@ -798,9 +955,24 @@ const styles =
         'center',
     },
 
+    logoutPressed: {
+      opacity: 0.7,
+
+      transform: [
+        {
+          scale: 0.96,
+        },
+      ],
+    },
+
+    logoutDisabled: {
+      opacity: 0.55,
+    },
+
+    // LOADING
+
     loading: {
-      paddingVertical:
-        80,
+      paddingVertical: 80,
 
       justifyContent:
         'center',
@@ -811,19 +983,17 @@ const styles =
 
     loadingText: {
       marginTop: 12,
-
       fontSize: 12,
 
       color:
         COLORS.textSecondary,
     },
 
-    profileBanner: {
-      flexDirection:
-        'row',
+    // PROFILE WARNING
 
-      alignItems:
-        'center',
+    profileBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
 
       padding: 13,
 
@@ -844,8 +1014,7 @@ const styles =
       width: 39,
       height: 39,
 
-      borderRadius:
-        20,
+      borderRadius: 20,
 
       backgroundColor:
         COLORS.white,
@@ -865,9 +1034,7 @@ const styles =
 
     profileBannerTitle: {
       fontSize: 12,
-
-      fontWeight:
-        '800',
+      fontWeight: '800',
 
       color:
         COLORS.primaryDark,
@@ -877,20 +1044,19 @@ const styles =
       marginTop: 3,
 
       fontSize: 10,
-
       lineHeight: 15,
 
       color:
         COLORS.textSecondary,
     },
 
+    // DONOR STATUS CARD
+
     donorCard: {
       padding: 15,
-
       minHeight: 82,
 
-      borderRadius:
-        16,
+      borderRadius: 16,
 
       backgroundColor:
         COLORS.white,
@@ -900,8 +1066,7 @@ const styles =
       borderColor:
         COLORS.border,
 
-      flexDirection:
-        'row',
+      flexDirection: 'row',
 
       alignItems:
         'center',
@@ -911,8 +1076,7 @@ const styles =
       width: 50,
       height: 50,
 
-      borderRadius:
-        25,
+      borderRadius: 25,
 
       justifyContent:
         'center',
@@ -931,22 +1095,17 @@ const styles =
         COLORS.primary,
 
       fontSize: 15,
-
-      fontWeight:
-        '900',
+      fontWeight: '900',
     },
 
     donorCardContent: {
       flex: 1,
-
       paddingRight: 7,
     },
 
     activeTitle: {
       fontSize: 14,
-
-      fontWeight:
-        '800',
+      fontWeight: '800',
 
       color:
         COLORS.text,
@@ -956,29 +1115,27 @@ const styles =
       marginTop: 4,
 
       fontSize: 10,
-
       lineHeight: 15,
 
       color:
         COLORS.textSecondary,
     },
 
+    // STATISTICS
+
     stats: {
-      flexDirection:
-        'row',
-
+      flexDirection: 'row',
       gap: 8,
-
       marginTop: 11,
     },
 
+    // EMERGENCY REQUESTS
+
     sectionHeader: {
       marginTop: 22,
-
       marginBottom: 10,
 
-      flexDirection:
-        'row',
+      flexDirection: 'row',
 
       alignItems:
         'center',
@@ -989,9 +1146,7 @@ const styles =
 
     sectionTitle: {
       fontSize: 15,
-
-      fontWeight:
-        '900',
+      fontWeight: '900',
 
       color:
         COLORS.text,
@@ -1002,18 +1157,17 @@ const styles =
         COLORS.primary,
 
       fontSize: 11,
-
-      fontWeight:
-        '700',
+      fontWeight: '700',
     },
+
+    // EMPTY STATES
 
     emptyCard: {
       minHeight: 155,
 
       padding: 20,
 
-      borderRadius:
-        15,
+      borderRadius: 15,
 
       borderWidth: 1,
 
@@ -1061,11 +1215,9 @@ const styles =
     smallButton: {
       marginTop: 14,
 
-      paddingHorizontal:
-        18,
+      paddingHorizontal: 18,
 
-      paddingVertical:
-        9,
+      paddingVertical: 9,
 
       borderRadius: 8,
 
@@ -1081,5 +1233,177 @@ const styles =
 
       fontWeight:
         '800',
+    },
+
+    // LOGOUT MODAL
+
+    modalOverlay: {
+      flex: 1,
+
+      backgroundColor:
+        'rgba(0, 0, 0, 0.45)',
+
+      justifyContent:
+        'center',
+
+      alignItems:
+        'center',
+
+      paddingHorizontal: 24,
+    },
+
+    modalCard: {
+      width: '100%',
+
+      maxWidth: 340,
+
+      backgroundColor:
+        COLORS.white,
+
+      borderRadius: 20,
+
+      paddingHorizontal: 22,
+
+      paddingTop: 24,
+
+      paddingBottom: 20,
+
+      alignItems:
+        'center',
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 5,
+      },
+
+      shadowOpacity: 0.18,
+
+      shadowRadius: 12,
+
+      elevation: 7,
+    },
+
+    modalIcon: {
+      width: 58,
+      height: 58,
+
+      borderRadius: 29,
+
+      backgroundColor:
+        COLORS.primaryLight,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      marginBottom: 14,
+    },
+
+    modalTitle: {
+      fontSize: 19,
+
+      fontWeight:
+        '900',
+
+      color:
+        COLORS.text,
+
+      textAlign:
+        'center',
+    },
+
+    modalMessage: {
+      marginTop: 8,
+
+      fontSize: 12,
+
+      lineHeight: 18,
+
+      color:
+        COLORS.textSecondary,
+
+      textAlign:
+        'center',
+
+      maxWidth: 260,
+    },
+
+    modalButtons: {
+      width: '100%',
+
+      flexDirection:
+        'row',
+
+      gap: 10,
+
+      marginTop: 22,
+    },
+
+    cancelButton: {
+      flex: 1,
+
+      minHeight: 44,
+
+      borderRadius: 10,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.border,
+
+      backgroundColor:
+        COLORS.white,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    cancelButtonText: {
+      fontSize: 13,
+
+      fontWeight:
+        '800',
+
+      color:
+        COLORS.text,
+    },
+
+    signOutButton: {
+      flex: 1,
+
+      minHeight: 44,
+
+      borderRadius: 10,
+
+      backgroundColor:
+        COLORS.primary,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    signOutButtonText: {
+      fontSize: 13,
+
+      fontWeight:
+        '800',
+
+      color:
+        COLORS.white,
+    },
+
+    buttonPressed: {
+      opacity: 0.75,
     },
   });

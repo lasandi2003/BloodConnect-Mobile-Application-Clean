@@ -63,3 +63,4 @@ export async function deleteBloodStock(
 
   await deleteDoc(ref);
 }
+
