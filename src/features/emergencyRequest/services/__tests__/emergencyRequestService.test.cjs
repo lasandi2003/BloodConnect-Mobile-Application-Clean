@@ -23,6 +23,8 @@ function setup() {
   const state = { writes: 0, transactions: 0, failBeforeCommit: false, failAfterCommit: false };
   const auth = { currentUser: { uid: 'requester-user' } };
   const firestore = {
+    query: (collection, ...constraints) => ({ collection, constraints }),
+    where: (field, operator, value) => ({ field, operator, value }),
     getDocFromServer: async reference => ({ exists: () => records.has(reference.path), data: () => records.get(reference.path) }),
     onSnapshot: (reference, options, next, error) => {
       state.listener = { reference, options, next, error, closed: false };
@@ -71,6 +73,77 @@ function setup() {
   return { service: load(path.resolve(__dirname, '../emergencyRequestService.ts')), records, state, auth,
     statusView: load(path.resolve(__dirname, '../../utils/requestStatus.ts')).getRequestStatusView };
 }
+
+test('history queries only the authenticated requester and sorts all dates including missing timestamps', async () => {
+  const { service, records, state } = setup();
+  await service.submitEmergencyRequest(draft(), 'requester-user', 'saved');
+  const record = records.get('emergencyRequests/saved');
+  let result;
+  const stop = service.watchRequesterHistory('requester-user', (...args) => { result = args; }, error => { throw error; });
+  assert.deepEqual(state.listener.reference, { collection: { name: 'emergencyRequests' }, constraints: [{ field: 'requesterId', operator: '==', value: 'requester-user' }] });
+  const doc = (id, millis) => ({ id, data: () => ({ ...record, ...(millis === null ? {} : { createdAt: { toMillis: () => millis } }) }) });
+  state.listener.next({ docs: [doc('old', 10), doc('legacy', null), doc('new', 20)], metadata: { fromCache: false } });
+  assert.deepEqual(result[0].map(item => item.requestId), ['new', 'old', 'legacy']);
+  assert.equal(result[1], false);
+  state.listener.next({ docs: [], metadata: { fromCache: false } });
+  assert.deepEqual(result[0], []);
+  stop();
+  assert.equal(state.listener.closed, true);
+});
+
+test('history displays the reported saved schema without requiring submission-only fields', () => {
+  const { service, state, auth } = setup();
+  const uid = 'pRq6M7PpTLMOVCl71TPjlwwwM183';
+  auth.currentUser = { uid };
+  let result;
+  service.watchRequesterHistory(uid, (...args) => { result = args; }, error => { throw error; });
+  state.listener.next({ docs: [{ id: 'previous-request', data: () => ({
+    requesterId: uid, status: 'pending_verification', bloodGroup: 'A-',
+    patientName: 'Example Patient', hospitalName: 'Nawaloka Hospital',
+    createdAt: { toMillis: () => 12345 }, verified: false,
+  }) }], metadata: { fromCache: false } });
+  assert.equal(result[0].length, 1);
+  assert.equal(result[2], 0);
+  assert.equal(result[0][0].status, 'pending_verification');
+  assert.equal(result[0][0].unitsRequired, null);
+  assert.equal(result[0][0].requiredDate, null);
+  assert.equal(result[0][0].urgencyLevel, null);
+  assert.equal(result[0][0].createdAtMillis, 12345);
+  assert.equal('patientName' in result[0][0], false);
+});
+
+test('history rejects another account and stale sessions without exposing results', () => {
+  const { service, state, auth } = setup();
+  const errors = [];
+  let calls = 0;
+  service.watchRequesterHistory('another-user', () => calls++, error => errors.push(error));
+  assert.equal(state.listener, undefined);
+  service.watchRequesterHistory('requester-user', () => calls++, error => errors.push(error));
+  state.listener.next({ docs: [{ id: 'private', data: () => ({ requesterId: 'another-user' }) }], metadata: { fromCache: false } });
+  auth.currentUser = null;
+  state.listener.next({ docs: [], metadata: { fromCache: false } });
+  assert.equal(calls, 0);
+  assert.equal(errors.length, 3);
+});
+
+test('history reports malformed records and forwards Firestore errors', async () => {
+  const { service, state, records } = setup();
+  await service.submitEmergencyRequest(draft(), 'requester-user', 'saved');
+  let result;
+  let failure;
+  service.watchRequesterHistory('requester-user', (...args) => { result = args; }, error => { failure = error; });
+  state.listener.next({ docs: [
+    { id: 'saved', data: () => records.get('emergencyRequests/saved') },
+    { id: 'incomplete', data: () => ({ requesterId: 'requester-user' }) },
+  ], metadata: { fromCache: true } });
+  assert.equal(result[0].length, 1);
+  assert.equal(result[1], true);
+  assert.equal(result[2], 1);
+  const error = { code: 'failed-precondition' };
+  state.listener.error(error);
+  assert.equal(failure, error);
+  assert.match(service.getRequestHistoryErrorMessage(error), /index configuration/);
+});
 
 test('generating a request ID performs no save', () => {
   const { service, state } = setup();

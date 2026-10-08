@@ -2,6 +2,7 @@ import type { PatientInformation, SubmittedRequestReceipt } from '../types/emerg
 
 export type RequesterStackParamList = {
   RequesterDashboard: undefined;
+  RequestHistory: undefined;
   PatientInformation: undefined;
   HospitalDetails: { patient: PatientInformation };
   ReviewRequest: undefined;

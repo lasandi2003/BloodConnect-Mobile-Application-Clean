@@ -18,18 +18,16 @@ import { useAuth } from '../../auth/context/AuthContext';
 
 interface Props {
   onCreateRequest: () => void;
+  onRequestHistory: () => void;
 }
 
-export default function RequesterDashboardScreen({ onCreateRequest }: Props) {
+export default function RequesterDashboardScreen({ onCreateRequest, onRequestHistory }: Props) {
   const { logout } = useAuth();
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   function handleRequestHistory() {
-    Alert.alert(
-      'Request History',
-      'Request history will be connected in a later step.',
-    );
+    onRequestHistory();
   }
 
   function closeLogoutModal() {

@@ -3,6 +3,8 @@ import { createNativeStackNavigator, type NativeStackScreenProps } from '@react-
 
 import RoleAppShell from '../../../components/RoleAppShell';
 import RequesterDashboardScreen from '../screens/RequesterDashboardScreen';
+import RequesterProfileScreen from '../screens/RequesterProfileScreen';
+import RequestHistoryScreen, { RequestHistoryContent } from '../screens/RequestHistoryScreen';
 import PatientInformationScreen from '../screens/PatientInformationScreen';
 import HospitalDetailsScreen from '../screens/HospitalDetailsScreen';
 import ReviewRequestScreen from '../screens/ReviewRequestScreen';
@@ -25,7 +27,9 @@ function RequesterHome({ navigation }: NativeStackScreenProps<RequesterStackPara
 
   return (
     <RoleAppShell
-      home={<RequesterDashboardScreen onCreateRequest={handleCreateRequest} />}
+      home={<RequesterDashboardScreen onCreateRequest={handleCreateRequest} onRequestHistory={() => navigation.navigate('RequestHistory')} />}
+      activityContent={<RequestHistoryContent onOpenRequest={requestId => navigation.navigate('RequestStatus', { requestId })} />}
+      profileContent={<RequesterProfileScreen />}
       activity={{
         title: 'My Requests',
         description: 'Active and previous emergency requests will be shown here.',
@@ -55,6 +59,7 @@ export default function RequesterNavigator() {
         screenOptions={{ headerShown: false, animation: 'slide_from_right' }}
       >
         <Stack.Screen name="RequesterDashboard" component={RequesterHome} />
+        <Stack.Screen name="RequestHistory" component={RequestHistoryScreen} />
         <Stack.Screen name="PatientInformation" component={PatientInformationScreen} />
         <Stack.Screen name="HospitalDetails" component={HospitalDetailsScreen} />
         <Stack.Screen name="ReviewRequest" component={ReviewRequestScreen} />
