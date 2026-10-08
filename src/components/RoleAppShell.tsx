@@ -37,7 +37,10 @@ interface PlaceholderConfig {
 
 interface Props {
   home: ReactNode;
-
+request-verification-and-donor-matching-
+  activityContent?: ReactNode;
+  servicesContent?: ReactNode; 
+        dev
   activity: PlaceholderConfig;
 
   services: PlaceholderConfig;
@@ -63,8 +66,14 @@ interface Props {
       }
     >
   >;
+request-verification-and-donor-matching-
+  activeTabColor?: string;
+  bottomBorderColor?: string;
+  initialTab?: TabKey;
+  tabPressHandlers?: Partial<Record<TabKey, () => void>>;
 
   showReports?: boolean;
+ dev
 }
 
 const defaultTabs = [
@@ -106,6 +115,8 @@ const defaultTabs = [
 
 export default function RoleAppShell({
   home,
+  activityContent,
+  servicesContent,
   activity,
   services,
   profile,
@@ -118,11 +129,16 @@ export default function RoleAppShell({
 
   tabLabels,
   tabIcons,
+  request-verification-and-donor-matching-
+  activeTabColor = COLORS.primary,
+  bottomBorderColor = COLORS.border,
+  initialTab = 'home',
+  tabPressHandlers,
 
   showReports = false,
+  dev
 }: Props) {
-  const [activeTab, setActiveTab] =
-    useState<TabKey>('home');
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
   const tabs = defaultTabs
     .filter(tab => {
@@ -162,17 +178,31 @@ export default function RoleAppShell({
 
   // INVENTORY
   if (activeTab === 'activity') {
+ request-verification-and-donor-matching-
+    content = activityContent ?? (
+      <PlaceholderScreen title={activity.title} description={activity.description} />
+    );
+
     content =
       activityContent ?? (
         <PlaceholderScreen
           title={activity.title}
           description={activity.description}
         />
-      );
+      ); 
+    dev
   }
 
   // REQUESTS
   if (activeTab === 'services') {
+request-verification-and-donor-matching-
+    content = servicesContent ?? (
+      <PlaceholderScreen
+        title={services.title}
+        description={services.description}
+      />
+    );
+
     content =
       servicesContent ?? (
         <PlaceholderScreen
@@ -180,6 +210,7 @@ export default function RoleAppShell({
           description={services.description}
         />
       );
+dev
   }
 
   // PROFILE
@@ -218,7 +249,12 @@ export default function RoleAppShell({
         {content}
       </View>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { borderTopColor: bottomBorderColor },
+        ]}
+      >
         {tabs.map(tab => {
           const isActive =
             activeTab === tab.key;
@@ -227,10 +263,29 @@ export default function RoleAppShell({
             <Pressable
               key={tab.key}
               style={styles.tabButton}
-              onPress={() =>
-                setActiveTab(tab.key)
-              }
+              onPress={() => {
+                const handler = tabPressHandlers?.[tab.key];
+                if (handler) {
+                  handler();
+                  return;
+                }
+                setActiveTab(tab.key);
+              }}
             >
+request-verification-and-donor-matching-
+              <Ionicons
+                name={
+                  isActive
+                    ? tab.activeIcon
+                    : tab.icon
+                }
+                size={21}
+                color={
+                  isActive
+                    ? activeTabColor
+                    : '#8A8A8A'
+                }
+              />
               <View
                 style={[
                   styles.iconContainer,
@@ -251,13 +306,16 @@ export default function RoleAppShell({
                       : '#8A8A8A'
                   }
                 />
-              </View>
+              </View> 
+              dev
 
               <Text
                 style={[
                   styles.tabLabel,
-                  isActive &&
-                    styles.activeTabLabel,
+                isActive && [
+                  styles.activeTabLabel,
+                  { color: activeTabColor },
+                ],
                 ]}
                 numberOfLines={1}
               >

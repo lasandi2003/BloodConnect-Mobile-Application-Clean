@@ -45,6 +45,11 @@ import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen'
 
 import DonorNavigator from '../features/donor/navigation/DonorNavigator';
 
+ request-verification-and-donor-matching-
+// Other role dashboards
+import RequesterDashboardScreen from '../features/emergencyRequest/screens/RequesterDashboardScreen';
+import VerificationMatchingNavigator from '../features/verificationMatching/navigation/VerificationMatchingNavigator';
+
 // ========================================
 // REQUESTER MODULE
 // ========================================
@@ -57,9 +62,11 @@ import RequesterNavigator from '../features/emergencyRequest/navigation/Requeste
 
 import HealthcareDashboardScreen from '../features/verificationMatching/screens/HealthcareDashboardScreen';
 
+ dev
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
 
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
+import DonorManagementScreen from '../features/inventoryAdmin/screens/DonorManagementScreen';
 
 // ========================================
 // BLOOD BANK REQUEST SCREENS
@@ -191,6 +198,8 @@ function DashboardRouter() {
     // ======================================
 
     case 'healthcare':
+ request-verification-and-donor-matching-
+      return <VerificationMatchingNavigator />;
 
       return (
         <RoleAppShell
@@ -251,6 +260,7 @@ function DashboardRouter() {
 
         />
       );
+ dev
 
     // ======================================
     // BLOOD BANK
@@ -414,13 +424,17 @@ function DashboardRouter() {
           home={
             <AdminDashboardScreen />
           }
-
+ request-verification-and-donor-matching-
+          activityContent={
+            <DonorManagementScreen />
+          }
+ dev
           activity={{
             title:
-              'User Management',
+              'Donor Management',
 
             description:
-              'Registered users and account statuses will be managed here.',
+              'Search and review registered donors.',
           }}
 
           services={{
@@ -441,7 +455,7 @@ function DashboardRouter() {
 
           tabLabels={{
             activity:
-              'Users',
+              'Donors',
 
             services:
               'Manage',
@@ -627,5 +641,8 @@ const styles =
         'center',
 
     },
-
+ request-verification-and-donor-matching-
   });
+
+  }); 
+dev

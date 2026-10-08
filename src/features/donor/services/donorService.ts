@@ -411,6 +411,58 @@ export async function getDonorProfile(
 }
 
 
+export async function getDonorProfiles(): Promise<DonorProfile[]> {
+  const snapshot = await getDocs(
+    collection(
+      db,
+      DONOR_PROFILES,
+    ),
+  );
+
+  return snapshot.docs.map(document => {
+    const data = document.data();
+    const bloodGroup =
+      typeof data.bloodGroup === 'string'
+        ? normalizeBloodGroup(data.bloodGroup)
+        : undefined;
+
+    return {
+      userId:
+        typeof data.userId === 'string' && data.userId.trim()
+          ? data.userId
+          : document.id,
+      fullName: typeof data.fullName === 'string' ? data.fullName : '',
+      email: typeof data.email === 'string' ? data.email : '',
+      phone: typeof data.phone === 'string' ? data.phone : '',
+      age:
+        typeof data.age === 'number'
+          ? data.age
+          : typeof data.age === 'string' && data.age.trim()
+            ? Number(data.age)
+            : undefined,
+      bloodGroup,
+      district: typeof data.district === 'string' ? data.district : '',
+      city: typeof data.city === 'string' ? data.city : '',
+      address: typeof data.address === 'string' ? data.address : '',
+      isAvailable:
+        typeof data.isAvailable === 'boolean'
+          ? data.isAvailable
+          : true,
+      lastDonationDate:
+        typeof data.lastDonationDate === 'string'
+          ? data.lastDonationDate
+          : '',
+      profileCompleted:
+        typeof data.profileCompleted === 'boolean'
+          ? data.profileCompleted
+          : false,
+      createdAt: data.createdAt ?? null,
+      updatedAt: data.updatedAt ?? null,
+    };
+  });
+}
+
+
 export async function saveDonorProfile(
   userId: string,
   input: SaveDonorProfileInput,
