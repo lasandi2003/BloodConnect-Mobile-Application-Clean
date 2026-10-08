@@ -9,6 +9,8 @@ import HealthcareDashboardScreen from '../screens/HealthcareDashboardScreen';
 import PendingBloodRequestsScreen from '../screens/PendingBloodRequestsScreen';
 import RequestVerificationScreen from '../screens/RequestVerificationScreen';
 import MatchingDonorsScreen from '../screens/MatchingDonorsScreen';
+import DonorDetailsScreen from '../screens/DonorDetailsScreen';
+import MatchConfirmationScreen from '../screens/MatchConfirmationScreen';
 import type { VerificationMatchingStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<VerificationMatchingStackParamList>();
@@ -62,6 +64,8 @@ export default function VerificationMatchingNavigator() {
       <Stack.Screen name="PendingBloodRequests" component={PendingBloodRequestsScreen} />
       <Stack.Screen name="RequestVerification" component={RequestVerificationScreen} />
       <Stack.Screen name="MatchingDonors" component={MatchingDonorsScreen} />
+      <Stack.Screen name="DonorDetails" component={DonorDetailsScreen} />
+      <Stack.Screen name="MatchConfirmation" component={MatchConfirmationScreen} />
     </Stack.Navigator>
   );
 }

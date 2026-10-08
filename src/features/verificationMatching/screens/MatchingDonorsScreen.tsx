@@ -16,6 +16,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { COLORS } from '../../../constants/colors';
+import PlaceholderScreen from '../../../components/PlaceholderScreen';
+import RoleAppShell from '../../../components/RoleAppShell';
 import type { DonorProfile, EmergencyRequest } from '../../donor/types/donor';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
 import { getMatchingDonors, getVerificationRequestById } from '../services/verificationService';
@@ -39,7 +41,13 @@ function donorInitials(name: string): string {
     .join('');
 }
 
-function RequestSummary({ request }: { request: EmergencyRequest }) {
+function RequestSummary({
+  request,
+  selectedCount,
+}: {
+  request: EmergencyRequest;
+  selectedCount: number;
+}) {
   const requestDetails = [
     valueOrEmpty(request.patientName) === 'Patient' ? '' : valueOrEmpty(request.patientName),
     valueOrEmpty(request.hospitalName) === 'Hospital' ? '' : valueOrEmpty(request.hospitalName),
@@ -67,44 +75,91 @@ function RequestSummary({ request }: { request: EmergencyRequest }) {
           ) : null}
         </View>
       </View>
+      <View style={styles.selectionProgress}>
+        <View style={styles.progressHeading}>
+          <Text style={styles.progressLabel}>Donors selected</Text>
+          <Text style={styles.progressCount}>{selectedCount} of {requiredDonorCount(request)}</Text>
+        </View>
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${progressPercent(selectedCount, requiredDonorCount(request))}%` },
+            ]}
+          />
+        </View>
+      </View>
     </View>
   );
 }
 
-function DonorCard({ donor }: { donor: DonorProfile }) {
+function requiredDonorCount(request: EmergencyRequest): number {
+  return Number.isFinite(request.unitsRequired)
+    ? Math.max(0, Math.floor(request.unitsRequired))
+    : 0;
+}
+
+function progressPercent(selected: number, required: number): number {
+  return required > 0 ? Math.min(100, (selected / required) * 100) : 0;
+}
+
+function DonorCard({
+  donor,
+  selected,
+  selectionDisabled,
+  onToggle,
+  onView,
+}: {
+  donor: DonorProfile;
+  selected: boolean;
+  selectionDisabled: boolean;
+  onToggle: () => void;
+  onView: () => void;
+}) {
   const donorName = valueOrEmpty(donor.fullName) || 'Donor';
   const location = [valueOrEmpty(donor.city), valueOrEmpty(donor.district)].filter(Boolean).join(', ');
   const lastDonation = valueOrEmpty(donor.lastDonationDate);
 
   return (
-    <View style={styles.donorCard}>
-      <View style={styles.avatar}><Text style={styles.avatarText}>{donorInitials(donorName) || 'D'}</Text></View>
-      <View style={styles.donorCopy}>
-        <View style={styles.nameLine}>
-          <Text style={styles.donorName} numberOfLines={1}>{donorName}</Text>
-          <View style={styles.availableBadge}>
-            <View style={styles.availableDot} />
-            <Text style={styles.availableText}>Available</Text>
-          </View>
+    <View style={[styles.donorCard, selected && styles.donorCardSelected]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${selected ? 'Deselect' : 'Select'} ${donorName}`}
+        accessibilityState={{ selected, disabled: selectionDisabled }}
+        disabled={selectionDisabled}
+        onPress={onToggle}
+        style={styles.donorSelectArea}
+      >
+        <View style={styles.avatarWrap}>
+          <View style={styles.avatar}><Text style={styles.avatarText}>{donorInitials(donorName) || 'D'}</Text></View>
+          {selected ? <View style={styles.selectedCheck}><Ionicons name="checkmark" size={10} color={COLORS.white} /></View> : null}
         </View>
-        <View style={styles.donorMetaLine}>
-          <Text style={styles.donorBloodBadge}>{donor.bloodGroup}</Text>
-          {location ? (
-            <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
-              <Text style={styles.metaText} numberOfLines={1}>{location}</Text>
+        <View style={styles.donorCopy}>
+          <View style={styles.nameLine}>
+            <Text style={styles.donorName} numberOfLines={1}>{donorName}</Text>
+            <View style={styles.availableBadge}>
+              <View style={styles.availableDot} />
+              <Text style={styles.availableText}>Available</Text>
             </View>
+          </View>
+          <View style={styles.donorMetaLine}>
+            <Text style={styles.donorBloodBadge}>{donor.bloodGroup}</Text>
+            {location ? (
+              <View style={styles.metaItem}>
+                <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
+                <Text style={styles.metaText} numberOfLines={1}>{location}</Text>
+              </View>
+            ) : null}
+          </View>
+          {lastDonation ? (
+            <Text style={styles.lastDonation} numberOfLines={1}>Last donation: {lastDonation}</Text>
           ) : null}
         </View>
-        {lastDonation ? (
-          <Text style={styles.lastDonation} numberOfLines={1}>Last donation: {lastDonation}</Text>
-        ) : null}
-      </View>
+      </Pressable>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`View details for ${donorName}`}
-        accessibilityState={{ disabled: true }}
-        disabled
+        onPress={onView}
         style={styles.viewButton}
       >
         <Text style={styles.viewButtonText}>View</Text>
@@ -113,7 +168,7 @@ function DonorCard({ donor }: { donor: DonorProfile }) {
   );
 }
 
-export default function MatchingDonorsScreen({ route, navigation }: Props) {
+function MatchingDonorsContent({ route, navigation }: Props) {
   const { requestId } = route.params;
   const [request, setRequest] = useState<EmergencyRequest | null>(null);
   const [requestLoading, setRequestLoading] = useState(true);
@@ -122,6 +177,20 @@ export default function MatchingDonorsScreen({ route, navigation }: Props) {
   const [donorsLoading, setDonorsLoading] = useState(false);
   const [donorsError, setDonorsError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [selectedDonorIds, setSelectedDonorIds] = useState<string[]>([]);
+  const requiredCount = request ? requiredDonorCount(request) : 0;
+  const selectedDonorIdFromDetails = route.params.selectedDonorId;
+
+  useEffect(() => {
+    if (!selectedDonorIdFromDetails) return;
+    setSelectedDonorIds(current => {
+      if (current.includes(selectedDonorIdFromDetails) || current.length >= requiredCount) {
+        return current;
+      }
+      return [...current, selectedDonorIdFromDetails];
+    });
+    navigation.setParams({ selectedDonorId: undefined });
+  }, [navigation, requiredCount, selectedDonorIdFromDetails]);
 
   const loadRequest = useCallback(async () => {
     setRequestLoading(true);
@@ -166,15 +235,27 @@ export default function MatchingDonorsScreen({ route, navigation }: Props) {
     );
   }, [donors, search]);
 
+  const toggleDonor = useCallback((donorId: string) => {
+    setSelectedDonorIds(current => {
+      if (current.includes(donorId)) {
+        return current.filter(id => id !== donorId);
+      }
+      if (current.length >= requiredCount) {
+        return current;
+      }
+      return [...current, donorId];
+    });
+  }, [requiredCount]);
+
   const listHeader = request ? (
     <>
-      <RequestSummary request={request} />
+      <RequestSummary request={request} selectedCount={selectedDonorIds.length} />
       <View style={styles.sectionTitleRow}>
         <View style={styles.sectionHeadingCopy}>
           <Text style={styles.sectionTitle}>Matching donors ({request.bloodGroup})</Text>
           <Text style={styles.sectionSubtitle}>Available donors with the same blood group</Text>
         </View>
-        {!donorsLoading && !donorsError ? <Text style={styles.foundCount}>{filteredDonors.length} found</Text> : null}
+        {!donorsLoading && !donorsError ? <Text style={styles.foundCount}>{donors.length} available</Text> : null}
       </View>
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
@@ -229,7 +310,7 @@ export default function MatchingDonorsScreen({ route, navigation }: Props) {
 
   if (requestLoading || requestError || !request) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.page}>
           <View style={styles.header}>
             <Pressable accessibilityRole="button" accessibilityLabel="Back to request" onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -249,7 +330,7 @@ export default function MatchingDonorsScreen({ route, navigation }: Props) {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.page}>
         <View style={styles.header}>
           <Pressable accessibilityRole="button" accessibilityLabel="Back to request" onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -260,7 +341,23 @@ export default function MatchingDonorsScreen({ route, navigation }: Props) {
         <FlatList
           data={filteredDonors}
           keyExtractor={donor => donor.userId}
-          renderItem={({ item }) => <DonorCard donor={item} />}
+          renderItem={({ item }) => {
+            const selected = selectedDonorIds.includes(item.userId);
+            return (
+              <DonorCard
+                donor={item}
+                selected={selected}
+                selectionDisabled={!selected && selectedDonorIds.length >= requiredCount}
+                onToggle={() => toggleDonor(item.userId)}
+                onView={() => navigation.navigate('DonorDetails', {
+                  requestId,
+                  donorId: item.userId,
+                  donorAlreadySelected: selected,
+                  canSelectDonor: selected || selectedDonorIds.length < requiredCount,
+                })}
+              />
+            );
+          }}
           ListHeaderComponent={listHeader}
           ListEmptyComponent={listEmpty}
           contentContainerStyle={styles.listContent}
@@ -269,8 +366,48 @@ export default function MatchingDonorsScreen({ route, navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           refreshControl={<RefreshControl refreshing={donorsLoading && donors.length > 0} onRefresh={() => void loadDonors()} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
         />
+        <View style={styles.actionBar}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Confirm match, ${selectedDonorIds.length} of ${requiredCount} donors selected`}
+            accessibilityHint="Match confirmation is not available yet."
+            accessibilityState={{ disabled: true }}
+            disabled
+            style={styles.confirmButton}
+          >
+            <Ionicons name="checkmark-done-circle-outline" size={19} color={COLORS.white} />
+            <Text style={styles.confirmButtonText}>Confirm match ({selectedDonorIds.length} of {requiredCount})</Text>
+          </Pressable>
+        </View>
       </View>
     </SafeAreaView>
+  );
+}
+
+export default function MatchingDonorsScreen(props: Props) {
+  const { navigation } = props;
+
+  return (
+    <RoleAppShell
+      home={<PlaceholderScreen title="Healthcare dashboard" description="Return to your verification dashboard." />}
+      activityContent={<PlaceholderScreen title="Pending requests" description="Review blood requests waiting for verification." />}
+      activity={{ title: 'Pending Requests', description: 'Requests waiting for healthcare verification.' }}
+      servicesContent={<MatchingDonorsContent {...props} />}
+      services={{ title: 'Donor Matching', description: 'Review available donors for the verified request.' }}
+      profile={{ title: 'Healthcare Profile', description: 'Healthcare account details.' }}
+      initialTab="services"
+      tabLabels={{ home: 'Home', activity: 'Requests', services: 'Donors', profile: 'Profile' }}
+      activeTabColor="#C8102E"
+      bottomBorderColor="#F3C9CF"
+      tabIcons={{
+        activity: { icon: 'document-text-outline', activeIcon: 'document-text' },
+        services: { icon: 'people-outline', activeIcon: 'people' },
+      }}
+      tabPressHandlers={{
+        home: () => navigation.popToTop(),
+        activity: () => navigation.navigate('PendingBloodRequests'),
+      }}
+    />
   );
 }
 
@@ -294,6 +431,12 @@ const styles = StyleSheet.create({
   summaryDescription: { flex: 1, minWidth: 0 },
   unitsText: { color: COLORS.white, fontSize: 14, fontWeight: '800' },
   summaryDetails: { marginTop: 4, color: '#FFE5E9', fontSize: 10, lineHeight: 14 },
+  selectionProgress: { marginTop: 13 },
+  progressHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  progressLabel: { color: '#FFE5E9', fontSize: 10, fontWeight: '600' },
+  progressCount: { color: COLORS.white, fontSize: 10, fontWeight: '800' },
+  progressTrack: { height: 5, marginTop: 6, borderRadius: 4, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.3)' },
+  progressFill: { height: '100%', borderRadius: 4, backgroundColor: COLORS.white },
   sectionTitleRow: { marginTop: 18, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   sectionHeadingCopy: { flex: 1, minWidth: 0 },
   sectionTitle: { color: COLORS.text, fontSize: 16, fontWeight: '800' },
@@ -302,9 +445,13 @@ const styles = StyleSheet.create({
   searchRow: { marginBottom: 12 },
   searchBox: { minHeight: 44, paddingHorizontal: 12, borderRadius: 13, borderWidth: 1, borderColor: '#F0DEE1', backgroundColor: COLORS.white, flexDirection: 'row', alignItems: 'center', gap: 8 },
   searchInput: { flex: 1, minWidth: 0, paddingVertical: 8, color: COLORS.text, fontSize: 12 },
-  donorCard: { minHeight: 90, padding: 12, borderRadius: 16, borderWidth: 1, borderColor: '#F2E4E6', backgroundColor: COLORS.white, flexDirection: 'row', alignItems: 'center', gap: 10, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  donorCard: { minHeight: 78, padding: 10, borderRadius: 16, borderWidth: 1, borderColor: '#F2E4E6', backgroundColor: COLORS.white, flexDirection: 'row', alignItems: 'center', gap: 8, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 },
+  donorCardSelected: { borderColor: COLORS.primary, backgroundColor: '#FFF8F9' },
+  donorSelectArea: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatarWrap: { position: 'relative' },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FCEAEC', alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: COLORS.primary, fontSize: 14, fontWeight: '800' },
+  selectedCheck: { position: 'absolute', right: -3, bottom: -3, width: 17, height: 17, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.primary, borderWidth: 2, borderColor: COLORS.white },
   donorCopy: { flex: 1, minWidth: 0 },
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   donorName: { flex: 1, minWidth: 0, color: COLORS.text, fontSize: 12, fontWeight: '800' },
@@ -319,6 +466,9 @@ const styles = StyleSheet.create({
   viewButton: { minWidth: 48, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: '#E9B8C0', alignItems: 'center', justifyContent: 'center', opacity: 0.65 },
   viewButtonText: { color: COLORS.primary, fontSize: 10, fontWeight: '700' },
   itemSeparator: { height: 9 },
+  actionBar: { paddingTop: 9, paddingBottom: 8, borderTopWidth: 1, borderTopColor: '#F2E1E4', backgroundColor: '#FFF5F5' },
+  confirmButton: { minHeight: 48, paddingHorizontal: 14, borderRadius: 14, backgroundColor: COLORS.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: 0.78, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 5, elevation: 3 },
+  confirmButtonText: { color: COLORS.white, fontSize: 12, fontWeight: '800' },
   listState: { flexGrow: 1, minHeight: 210, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyIcon: { width: 54, height: 54, borderRadius: 27, backgroundColor: '#FCEAEC', alignItems: 'center', justifyContent: 'center' },
   stateTitle: { color: COLORS.text, fontSize: 14, fontWeight: '800', textAlign: 'center' },
