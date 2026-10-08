@@ -12,6 +12,7 @@ import MatchingDonorsScreen from '../screens/MatchingDonorsScreen';
 import DonorDetailsScreen from '../screens/DonorDetailsScreen';
 import MatchConfirmationScreen from '../screens/MatchConfirmationScreen';
 import NotificationStatusScreen from '../screens/NotificationStatusScreen';
+import DonorCommunicationScreen from '../screens/DonorCommunicationScreen';
 import MatchingHistoryScreen from '../screens/MatchingHistoryScreen';
 import type { VerificationMatchingStackParamList } from './types';
 
@@ -71,6 +72,7 @@ export default function VerificationMatchingNavigator() {
       <Stack.Screen name="DonorDetails" component={DonorDetailsScreen} />
       <Stack.Screen name="MatchConfirmation" component={MatchConfirmationScreen} />
       <Stack.Screen name="NotificationStatus" component={NotificationStatusScreen} />
+      <Stack.Screen name="DonorCommunication" component={DonorCommunicationScreen} />
       <Stack.Screen name="MatchingHistory" component={MatchingHistoryScreen} />
     </Stack.Navigator>
   );

@@ -22,6 +22,10 @@ export type VerificationMatchingStackParamList = {
     requestId: string;
     donorId: string;
   };
+  DonorCommunication: {
+    requestId: string;
+    donorId: string;
+  };
   MatchingHistory: undefined | {
     requestId: string;
     donorId: string;

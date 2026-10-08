@@ -2,8 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   ActivityIndicator,
-  Alert,
-  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -21,7 +19,7 @@ import RoleAppShell from '../../../components/RoleAppShell';
 import type { DonorProfile, DonorResponse, EmergencyRequest } from '../../donor/types/donor';
 import { getDonorProfile, getDonorResponseForRequest } from '../../donor/services/donorService';
 import type { VerificationMatchingStackParamList } from '../navigation/types';
-import { getVerificationRequestById } from '../services/verificationService';
+import { getConfirmedDonorMatch, getVerificationRequestById } from '../services/verificationService';
 
 type Props = NativeStackScreenProps<VerificationMatchingStackParamList, 'NotificationStatus'>;
 type ResponseStatus = 'accepted' | 'declined' | 'completed' | 'withdrawn' | 'pending' | 'unknown';
@@ -32,6 +30,17 @@ function clean(value: string | undefined): string {
   return text && !['null', 'undefined', 'not specified', 'hospital', 'location unavailable'].includes(text.toLowerCase())
     ? text
     : '';
+}
+
+function logReadFailure(operation: string, error: unknown): void {
+  const details = error && typeof error === 'object'
+    ? error as { code?: unknown; message?: unknown }
+    : null;
+  console.warn(`[NotificationStatus] ${operation} failed`, {
+    code: typeof details?.code === 'string' ? details.code : 'unknown',
+    message: typeof details?.message === 'string' ? details.message : String(error),
+    error,
+  });
 }
 
 function displayResponseStatus(response: DonorResponse | null): ResponseStatus {
@@ -63,19 +72,19 @@ function formatTimestamp(value: unknown): string {
 }
 
 function statusLabel(status: ResponseStatus, statusLoadError: boolean): string {
-  if (statusLoadError) return 'Status unavailable';
+  if (statusLoadError) return 'Response unavailable';
   switch (status) {
     case 'accepted': return 'Donor accepted';
     case 'declined': return 'Donor declined';
     case 'completed': return 'Donation completed';
     case 'withdrawn': return 'Response withdrawn';
     case 'pending': return 'Pending';
-    default: return 'Waiting for donor';
+    default: return 'Match confirmed';
   }
 }
 
 function stageCount(status: ResponseStatus, statusLoadError: boolean): string {
-  if (statusLoadError) return 'Status unavailable';
+  if (statusLoadError) return 'Donor response could not be checked';
   if (status === 'unknown') return 'Waiting for donor';
   if (status === 'pending') return 'Waiting for donor';
   if (status === 'completed') return 'Step 4 of 4';
@@ -133,6 +142,7 @@ function NotificationStatusContent({ route, navigation }: Props) {
   const { requestId, donorId } = route.params;
   const [request, setRequest] = useState<EmergencyRequest | null>(null);
   const [donor, setDonor] = useState<DonorProfile | null>(null);
+  const [matchConfirmed, setMatchConfirmed] = useState(false);
   const [response, setResponse] = useState<DonorResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -143,11 +153,13 @@ function NotificationStatusContent({ route, navigation }: Props) {
     setLoading(true);
     setError(null);
     setMissing(null);
+    setMatchConfirmed(false);
     setResponseLoadError(false);
     try {
-      const [loadedRequest, loadedDonor] = await Promise.all([
+      const [loadedRequest, loadedDonor, loadedMatch] = await Promise.all([
         getVerificationRequestById(requestId),
         getDonorProfile(donorId),
+        getConfirmedDonorMatch(requestId, donorId),
       ]);
 
       if (!loadedRequest) {
@@ -155,6 +167,13 @@ function NotificationStatusContent({ route, navigation }: Props) {
         setDonor(null);
         setResponse(null);
         setMissing('The blood request could not be found.');
+        return;
+      }
+      if (!loadedMatch || loadedMatch.status !== 'matched') {
+        setRequest(null);
+        setDonor(null);
+        setResponse(null);
+        setMissing('The confirmed donor match could not be found.');
         return;
       }
       if (
@@ -171,15 +190,16 @@ function NotificationStatusContent({ route, navigation }: Props) {
 
       setRequest(loadedRequest);
       setDonor(loadedDonor);
+      setMatchConfirmed(true);
       try {
         setResponse(await getDonorResponseForRequest(donorId, requestId));
       } catch (responseError) {
-        console.warn('Donor response status unavailable:', responseError);
+        logReadFailure('donorResponses lookup', responseError);
         setResponse(null);
         setResponseLoadError(true);
       }
     } catch (loadError) {
-      console.error('Notification status load error:', loadError);
+      logReadFailure('request, donor, or match lookup', loadError);
       setRequest(null);
       setDonor(null);
       setResponse(null);
@@ -211,21 +231,6 @@ function NotificationStatusContent({ route, navigation }: Props) {
     return parts.join(' · ') || 'Hospital details unavailable';
   }, [request]);
 
-  const contactDonor = async () => {
-    const phone = donor?.phone?.trim().replace(/[^\d+]/g, '') ?? '';
-    if (!/\d/.test(phone)) {
-      Alert.alert('Phone number unavailable', 'There is no usable phone number in this donor profile.');
-      return;
-    }
-
-    try {
-      await Linking.openURL(`tel:${phone}`);
-    } catch (contactError) {
-      console.warn('Could not open donor phone dialer:', contactError);
-      Alert.alert('Calling unavailable', 'This device could not open the phone dialer.');
-    }
-  };
-
   const responseReceived = ['accepted', 'declined', 'completed', 'withdrawn'].includes(responseStatus);
   const accepted = responseStatus === 'accepted' || responseStatus === 'completed';
   const completedDonation = responseStatus === 'completed';
@@ -238,7 +243,7 @@ function NotificationStatusContent({ route, navigation }: Props) {
         <Text style={styles.stateText}>Loading notification status...</Text>
       </View>
     );
-  } else if (error || missing || !request || !donor) {
+  } else if (error || missing || !request || !donor || !matchConfirmed) {
     content = (
       <View style={styles.stateArea}>
         <Ionicons name="cloud-offline-outline" size={30} color={COLORS.primary} />
@@ -296,7 +301,7 @@ function NotificationStatusContent({ route, navigation }: Props) {
                   key={step}
                   style={[
                     styles.statusTrackSegment,
-                    ((index === 2 && responseReceived) || (index === 3 && completedDonation)) &&
+                    ((index === 2 && accepted) || (index === 3 && completedDonation)) &&
                       styles.statusTrackSegmentDone,
                   ]}
                 />
@@ -307,43 +312,47 @@ function NotificationStatusContent({ route, navigation }: Props) {
 
           <View style={styles.progressCard}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressTitle}>Progress updates</Text>
-              <View style={styles.latestBadge}><View style={styles.latestDot} /><Text style={styles.latestText}>Latest</Text></View>
+              <Text style={styles.progressTitle}>Live progress</Text>
+              <View style={styles.latestBadge}><View style={styles.latestDot} /><Text style={styles.latestText}>Live</Text></View>
             </View>
             <TimelineStep
               title="Notification sent"
-              description="Delivery tracking is not available."
+              description="Notification delivery tracking is unavailable."
               state="pending"
               time="—"
               showConnector
             />
             <TimelineStep
               title="Notification viewed"
-              description="Message view tracking is not available."
+              description="Message view tracking is unavailable."
               state="pending"
               time="—"
               showConnector
             />
             <TimelineStep
-              title={responseStatus === 'declined' ? 'Donor declined' : responseStatus === 'withdrawn' ? 'Response withdrawn' : 'Donor accepted'}
+              title={responseStatus === 'accepted' || responseStatus === 'completed' ? 'Donor accepted' : responseStatus === 'declined' ? 'Donor declined' : responseStatus === 'withdrawn' ? 'Response withdrawn' : responseStatus === 'pending' ? 'Waiting for donor' : 'Donor response'}
               description={currentDescription}
-              state={responseStatus === 'accepted' ? 'complete' : responseStatus === 'completed' ? 'complete' : responseStatus === 'declined' || responseStatus === 'withdrawn' ? 'declined' : responseLoadError ? 'pending' : 'current'}
+              state={responseStatus === 'accepted' ? 'current' : responseStatus === 'completed' ? 'complete' : responseStatus === 'declined' || responseStatus === 'withdrawn' ? 'declined' : responseStatus === 'pending' ? 'current' : 'pending'}
               time={responseReceived ? latestResponseTime : '—'}
               showConnector
             />
             <TimelineStep
               title={completedDonation ? 'Donation completed' : 'Donation scheduled'}
-              description={completedDonation ? 'The response is marked complete.' : 'Waiting for schedule details.'}
+              description={completedDonation ? 'The donor response is marked completed.' : 'Scheduling details are unavailable.'}
               state={completedDonation ? 'complete' : 'pending'}
               time={completedDonation ? latestResponseTime : '—'}
               showConnector={false}
             />
-            {responseLoadError ? <Text style={styles.responseNotice}>Donor response status could not be loaded. Pull down to retry.</Text> : null}
+            {responseLoadError ? <Text style={styles.responseNotice}>Donor response status could not be loaded. Other match details are still available.</Text> : null}
           </View>
         </ScrollView>
 
         <View style={styles.contactBar}>
-          <Pressable accessibilityRole="button" onPress={() => void contactDonor()} style={styles.contactButton}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => navigation.navigate('DonorCommunication', { requestId, donorId })}
+            style={styles.contactButton}
+          >
             <Ionicons name="call-outline" size={20} color={COLORS.white} />
             <Text style={styles.contactButtonText}>Contact donor</Text>
           </Pressable>
@@ -437,7 +446,7 @@ const styles = StyleSheet.create({
   latestBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 11, backgroundColor: '#FCEAEC' },
   latestDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
   latestText: { color: COLORS.primary, fontSize: 9, fontWeight: '700' },
-  timelineItem: { minHeight: 66, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  timelineItem: { minHeight: 58, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   timelineRail: { width: 20, alignItems: 'center', alignSelf: 'stretch' },
   timelineNode: { width: 19, height: 19, borderRadius: 10, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
   timelineNode_complete: { borderColor: '#15945B', backgroundColor: '#15945B' },
@@ -447,7 +456,7 @@ const styles = StyleSheet.create({
   currentNodeDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.primary },
   timelineConnector: { position: 'absolute', top: 18, bottom: 0, width: 2, backgroundColor: '#E6E8EB' },
   timelineConnectorComplete: { backgroundColor: '#68B78D' },
-  timelineCopy: { flex: 1, minWidth: 0, paddingBottom: 12 },
+  timelineCopy: { flex: 1, minWidth: 0, paddingBottom: 8 },
   timelineTitle: { color: COLORS.text, fontSize: 12, fontWeight: '700' },
   timelineTitle_complete: { color: COLORS.text },
   timelineTitle_current: { color: COLORS.primary },

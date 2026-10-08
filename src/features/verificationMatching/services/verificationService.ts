@@ -60,6 +60,14 @@ export interface MatchingHistoryRecord {
   updatedAt: unknown;
 }
 
+export interface ConfirmedDonorMatch {
+  requestId: string;
+  donorId: string;
+  status: string;
+  createdAt: unknown;
+  updatedAt: unknown;
+}
+
 function logMatchingHistoryReadFailure(operation: string, error: unknown): void {
   const details = error && typeof error === 'object'
     ? error as { code?: unknown; message?: unknown }
@@ -238,6 +246,33 @@ export async function getVerificationRequestById(
     snapshot.id,
     snapshot.data() as Record<string, unknown>,
   );
+}
+
+/** Read the persisted match identified by the existing deterministic document ID. */
+export async function getConfirmedDonorMatch(
+  requestId: string,
+  donorId: string,
+): Promise<ConfirmedDonorMatch | null> {
+  const snapshot = await getDoc(
+    doc(db, DONOR_MATCHES, `${requestId}_${donorId}`),
+  );
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  const data = snapshot.data();
+  if (data.requestId !== requestId || data.donorId !== donorId) {
+    return null;
+  }
+
+  return {
+    requestId,
+    donorId,
+    status: asText(data.status, 'unknown').toLowerCase(),
+    createdAt: data.createdAt ?? null,
+    updatedAt: data.updatedAt ?? data.createdAt ?? null,
+  };
 }
 
 /** Persist confirmed matches atomically and idempotently. */

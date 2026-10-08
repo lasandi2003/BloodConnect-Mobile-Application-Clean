@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -118,6 +119,7 @@ function PendingRequestsContent() {
           )}
         >
         <View style={styles.summaryCard}>
+          <Ionicons name="pulse" size={144} color="rgba(255,255,255,0.18)" pointerEvents="none" style={styles.summaryPulse} />
           <View style={styles.summaryTop}>
             <View style={styles.summaryCopy}>
               <Text style={styles.summaryTitle}>Pending requests</Text>
@@ -125,10 +127,14 @@ function PendingRequestsContent() {
                 {requests.length} {requests.length === 1 ? 'request needs' : 'requests need'} your attention
               </Text>
             </View>
-            <View style={styles.totalBadge}>
-              <Text style={styles.totalBadgeNumber}>{loading ? '—' : requests.length}</Text>
-              <Text style={styles.totalBadgeLabel}>pending</Text>
-            </View>
+          </View>
+          <View style={styles.summaryArtwork} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <Image
+              source={require('../../../../assets/images/blood-donation.png')}
+              resizeMode="contain"
+              style={styles.summaryImage}
+              accessible={false}
+            />
           </View>
           <View style={styles.summaryStatuses}>
             {([
@@ -386,7 +392,9 @@ const styles = StyleSheet.create({
     marginHorizontal: -2,
     marginTop: 4,
     marginBottom: 9,
-    padding: 13,
+    minHeight: 126,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: '#C8102E',
     shadowColor: '#C8102E',
@@ -394,18 +402,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.18,
     shadowRadius: 8,
     elevation: 4,
+    overflow: 'hidden',
   },
-  summaryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  summaryCopy: { flex: 1, minWidth: 0 },
+  summaryTop: { flexDirection: 'row', alignItems: 'center' },
+  summaryCopy: { width: '62%', minWidth: 0 },
   summaryTitle: { color: COLORS.white, fontSize: 16, fontWeight: '800' },
-  summarySubtitle: { marginTop: 3, color: '#FFE3E7', fontSize: 10 },
-  totalBadge: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.white },
-  totalBadgeNumber: { color: COLORS.primary, fontSize: 17, lineHeight: 19, fontWeight: '800' },
-  totalBadgeLabel: { color: COLORS.primary, fontSize: 7, fontWeight: '700' },
-  summaryStatuses: { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  summaryStatus: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  summaryStatusDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: COLORS.white },
-  summaryStatusText: { color: COLORS.white, fontSize: 8, fontWeight: '600' },
+  summarySubtitle: { marginTop: 2, color: '#FFE3E7', fontSize: 9, fontWeight: '600' },
+  summaryPulse: { position: 'absolute', left: 70, bottom: 3, transform: [{ scaleX: 1.45 }] },
+  summaryArtwork: { position: 'absolute', top: 19, right: 14, width: 88, height: 88, flexShrink: 0, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF', overflow: 'hidden' },
+  summaryImage: { width: 82, height: 82 },
+  summaryStatuses: { maxWidth: '60%', marginTop: 7, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  summaryStatus: { minHeight: 17, paddingHorizontal: 6, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.18)', flexDirection: 'row', alignItems: 'center', gap: 4 },
+  summaryStatusDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: COLORS.white },
+  summaryStatusText: { color: COLORS.white, fontSize: 7, fontWeight: '700' },
   controls: {
     paddingHorizontal: 0,
     paddingTop: 4,
