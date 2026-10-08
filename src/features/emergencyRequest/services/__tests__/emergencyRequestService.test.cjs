@@ -320,3 +320,70 @@ test('missing records and mismatched request IDs cannot be updated', async () =>
   await assert.rejects(service.updateEmergencyRequest('request-1', 'requester-user', form, baseline), /could not be found/);
   assert.equal(state.writes, 1);
 });
+
+test('cancellation retains the record and all original details while setting cancellation metadata', async () => {
+  const { service, records, state } = await updateFixture();
+  const original = { ...records.get('emergencyRequests/request-1') };
+  await service.cancelEmergencyRequest('request-1', 'requester-user', original.status);
+  const saved = records.get('emergencyRequests/request-1');
+  assert.equal(records.size, 1);
+  assert.equal(saved.status, 'cancelled');
+  assert.equal(saved.cancelledBy, 'requester-user');
+  assert.deepEqual(saved.cancelledAt, { serverTimestamp: true });
+  for (const key of Object.keys(original).filter(key => key !== 'status' && key !== 'updatedAt')) {
+    assert.deepEqual(saved[key], original[key]);
+  }
+  assert.equal(state.writes, 2);
+});
+
+test('cancellation retry after lost acknowledgement does not rewrite the record', async () => {
+  const { service, records, state } = await updateFixture();
+  state.failAfterCommit = true;
+  await assert.rejects(service.cancelEmergencyRequest('request-1', 'requester-user', 'pending_verification'));
+  const saved = records.get('emergencyRequests/request-1');
+  await service.cancelEmergencyRequest('request-1', 'requester-user', 'pending_verification');
+  assert.equal(records.get('emergencyRequests/request-1'), saved);
+  assert.equal(saved.status, 'cancelled');
+  assert.equal(state.writes, 2);
+});
+
+test('cancellation rejects another owner, changed session and missing records', async () => {
+  const { service, records, auth, state } = await updateFixture();
+  records.get('emergencyRequests/request-1').requesterId = 'other-user';
+  await assert.rejects(service.cancelEmergencyRequest('request-1', 'requester-user', 'pending_verification'), /does not belong/);
+  auth.currentUser = { uid: 'other-user' };
+  await assert.rejects(service.cancelEmergencyRequest('request-1', 'requester-user', 'pending_verification'), /session has changed/);
+  auth.currentUser = { uid: 'requester-user' };
+  records.delete('emergencyRequests/request-1');
+  await assert.rejects(service.cancelEmergencyRequest('request-1', 'requester-user', 'pending_verification'), /could not be found/);
+  assert.equal(state.writes, 1);
+});
+
+test('completed, rejected, closed and unknown requests cannot be cancelled', async () => {
+  for (const status of ['completed', 'fulfilled', 'rejected', 'closed', 'unknown_status']) {
+    const { service, records, state } = await updateFixture();
+    records.get('emergencyRequests/request-1').status = status;
+    await assert.rejects(service.cancelEmergencyRequest('request-1', 'requester-user', status), /no longer active/);
+    assert.equal(state.writes, 1);
+  }
+});
+
+test('a concurrent status change requires refreshed confirmation', async () => {
+  const { service, records, state } = await updateFixture();
+  const record = records.get('emergencyRequests/request-1');
+  record.status = 'verified'; record.verified = true;
+  await assert.rejects(service.cancelEmergencyRequest('request-1', 'requester-user', 'pending_verification'), /status changed/);
+  assert.equal(state.writes, 1);
+  await service.cancelEmergencyRequest('request-1', 'requester-user', 'verified');
+  assert.equal(records.get('emergencyRequests/request-1').verified, true);
+  assert.equal(records.get('emergencyRequests/request-1').status, 'cancelled');
+});
+
+test('a failed cancellation commit leaves the request active', async () => {
+  const { service, records, state } = await updateFixture();
+  state.failBeforeCommit = true;
+  await assert.rejects(service.cancelEmergencyRequest('request-1', 'requester-user', 'pending_verification'));
+  assert.equal(records.get('emergencyRequests/request-1').status, 'pending_verification');
+  assert.equal(records.get('emergencyRequests/request-1').cancelledAt, undefined);
+  assert.equal(state.writes, 1);
+});

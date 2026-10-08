@@ -3,7 +3,7 @@ import { auth, db } from '../../../config/firebase';
 import type { EmergencyRequestDraft, RequestStatusDetails, SubmittedRequestReceipt, UpdateRequestForm } from '../types/emergencyRequest';
 import { buildRequestRecord, buildSubmissionReceipt } from '../utils/submissionData';
 import { validateHospitalDetails } from '../utils/hospitalValidation';
-import { canUpdateRequest } from '../utils/requestStatus';
+import { canCancelRequest, canUpdateRequest } from '../utils/requestStatus';
 
 const REQUESTS_COLLECTION = 'emergencyRequests';
 
@@ -123,4 +123,32 @@ export function getRequestUpdateErrorMessage(error: unknown) {
   if (code === 'permission-denied') return 'You do not have permission to update this request. Please contact the project administrator.';
   if (code === 'unavailable' || code === 'deadline-exceeded') return 'Unable to confirm the update. Check your connection, then reload the saved details before retrying.';
   return error instanceof Error ? error.message : 'Unable to update the request. Please retry.';
+}
+
+export async function cancelEmergencyRequest(requestId: string, requesterId: string, expectedStatus: string) {
+  if (!requestId || auth.currentUser?.uid !== requesterId) throw new Error('Your session has changed. Please sign in again.');
+  const reference = doc(db, REQUESTS_COLLECTION, requestId);
+  await runTransaction(db, async transaction => {
+    const snapshot = await transaction.get(reference);
+    if (auth.currentUser?.uid !== requesterId) throw new Error('Your session has changed. Please sign in again.');
+    if (!snapshot.exists()) throw new Error('This request could not be found.');
+    const data = snapshot.data();
+    if (data.requesterId !== requesterId) throw new Error('This request does not belong to your account.');
+    const status = typeof data.status === 'string' ? data.status.trim().toLowerCase() : '';
+    if (status === 'cancelled') return; // Recover a retry without changing cancellation timestamps.
+    if (!canCancelRequest(status)) throw new Error('This request is no longer active and cannot be cancelled.');
+    if (status !== expectedStatus.trim().toLowerCase()) {
+      throw new Error('The request status changed since you opened this confirmation. Reload its details before cancelling.');
+    }
+    transaction.update(reference, {
+      status: 'cancelled', cancelledBy: requesterId, cancelledAt: serverTimestamp(), updatedAt: serverTimestamp(),
+    });
+  });
+}
+
+export function getRequestCancelErrorMessage(error: unknown) {
+  const code = error && typeof error === 'object' && 'code' in error ? String(error.code) : '';
+  if (code === 'permission-denied') return 'You do not have permission to cancel this request. Please contact the project administrator.';
+  if (code === 'unavailable' || code === 'deadline-exceeded') return 'Unable to confirm cancellation. Check your connection and retry.';
+  return error instanceof Error ? error.message : 'Unable to cancel the request. Please retry.';
 }

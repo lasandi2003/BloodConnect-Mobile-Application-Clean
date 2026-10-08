@@ -1,3 +1,8 @@
+export function canCancelRequest(status: string) {
+  return ['pending_verification', 'pending', 'open', 'verified', 'approved', 'matching',
+    'donor_matching', 'matched', 'donor_found'].includes(status.trim().toLowerCase());
+}
+
 export function canUpdateRequest(status: string, verified: boolean) {
   return !verified && ['pending_verification', 'pending', 'open'].includes(status.trim().toLowerCase());
 }

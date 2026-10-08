@@ -10,7 +10,7 @@ import type { RequesterStackParamList } from '../navigation/types';
 import type { RequestStatusDetails } from '../types/emergencyRequest';
 import { getRequestStatusErrorMessage, watchEmergencyRequest } from '../services/emergencyRequestService';
 import { formatDisplayDate } from '../utils/hospitalValidation';
-import { canUpdateRequest, getRequestStatusView } from '../utils/requestStatus';
+import { canCancelRequest, canUpdateRequest, getRequestStatusView } from '../utils/requestStatus';
 
 type Props = NativeStackScreenProps<RequesterStackParamList, 'RequestStatus'>;
 const steps = ['Request submitted', 'Healthcare verification', 'Donor matching', 'Request fulfilled'];
@@ -71,6 +71,8 @@ export default function RequestStatusScreen({ navigation, route }: Props) {
         {request && status ? (
           <>
             {route.params.updateSaved ? <Text style={styles.successText} accessibilityRole="alert">Request updated successfully.</Text> : null}
+            {route.params.cancelSaved && request.status.trim().toLowerCase() === 'cancelled'
+              ? <Text style={styles.successText} accessibilityRole="alert">Request cancelled successfully.</Text> : null}
             <View style={styles.statusCard}>
               <Text style={styles.statusLabel}>{status.label}</Text>
               <Text style={styles.description}>{status.description}</Text>
@@ -110,7 +112,12 @@ export default function RequestStatusScreen({ navigation, route }: Props) {
                 accessibilityState={{ disabled: !canUpdateRequest(request.status, request.verified) || fromCache || pendingWrites }}>
                 <Text style={styles.secondaryText}>Update Request</Text>
               </Pressable>
-              <View style={styles.disabledButton}><Text style={styles.secondaryText}>Cancel Request</Text><Text style={styles.secondaryText}>Coming soon</Text></View>
+              <Pressable style={[styles.cancelButton, (!canCancelRequest(request.status) || fromCache || pendingWrites) && styles.disabledButton]}
+                disabled={!canCancelRequest(request.status) || fromCache || pendingWrites}
+                onPress={() => navigation.navigate('CancelRequest', { requestId })} accessibilityRole="button"
+                accessibilityState={{ disabled: !canCancelRequest(request.status) || fromCache || pendingWrites }}>
+                <Text style={canCancelRequest(request.status) && !fromCache && !pendingWrites ? styles.cancelText : styles.secondaryText}>Cancel Request</Text>
+              </Pressable>
             </View>
             {!canUpdateRequest(request.status, request.verified) ? <Text style={styles.editHint}>Only requests awaiting verification can be edited.</Text> : null}
           </>
@@ -160,6 +167,9 @@ const styles = StyleSheet.create({
   updateButton: { flex: 1, minHeight: 52, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: COLORS.primary,
     backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' },
   successText: { fontSize: 13, color: COLORS.success, fontWeight: '700', marginBottom: 14 },
+  cancelButton: { flex: 1, minHeight: 52, padding: 12, borderRadius: 10, backgroundColor: COLORS.primary,
+    alignItems: 'center', justifyContent: 'center' },
+  cancelText: { fontSize: 13, fontWeight: '700', color: COLORS.white },
   editHint: { fontSize: 12, lineHeight: 18, color: COLORS.textSecondary, marginBottom: 16 },
   dashboardButton: { minHeight: 52, borderRadius: 10, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
   dashboardText: { fontSize: 14, fontWeight: '700', color: COLORS.white },

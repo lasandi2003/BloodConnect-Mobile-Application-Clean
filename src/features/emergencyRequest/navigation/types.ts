@@ -6,6 +6,7 @@ export type RequesterStackParamList = {
   HospitalDetails: { patient: PatientInformation };
   ReviewRequest: undefined;
   RequestSubmitted: { receipt: SubmittedRequestReceipt };
-  RequestStatus: { requestId: string; updateSaved?: boolean };
+  RequestStatus: { requestId: string; updateSaved?: boolean; cancelSaved?: boolean };
   UpdateRequest: { requestId: string };
+  CancelRequest: { requestId: string };
 };
