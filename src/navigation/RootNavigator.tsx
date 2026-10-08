@@ -1,8 +1,4 @@
-import React, {
-  useEffect,
-  useState,
-} from 'react';
-
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -42,10 +38,14 @@ import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen'
 import DonorNavigator from '../features/donor/navigation/DonorNavigator';
 
 // ========================================
-// OTHER ROLE DASHBOARDS
+// REQUESTER MODULE
 // ========================================
 
-import RequesterDashboardScreen from '../features/emergencyRequest/screens/RequesterDashboardScreen';
+import RequesterNavigator from '../features/emergencyRequest/navigation/RequesterNavigator';
+
+// ========================================
+// OTHER ROLE DASHBOARDS
+// ========================================
 
 import HealthcareDashboardScreen from '../features/verificationMatching/screens/HealthcareDashboardScreen';
 
@@ -81,7 +81,7 @@ const AuthStack =
   >();
 
 /**
- * Authentication navigation
+ * Authentication navigation.
  *
  * Used only when there is no logged-in
  * Firebase user/profile.
@@ -95,7 +95,6 @@ function AuthNavigator() {
         animation: 'slide_from_right',
       }}
     >
-
       <AuthStack.Screen
         name="Login"
         component={LoginScreen}
@@ -115,7 +114,6 @@ function AuthNavigator() {
         name="ForgotPassword"
         component={ForgotPasswordScreen}
       />
-
     </AuthStack.Navigator>
   );
 }
@@ -140,29 +138,20 @@ function DashboardRouter() {
   if (!profile) {
     return (
       <View
-        style={
-          styles.errorContainer
-        }
+        style={styles.errorContainer}
       >
-
         <Text
-          style={
-            styles.errorTitle
-          }
+          style={styles.errorTitle}
         >
           Unable to load account
         </Text>
 
         <Text
-          style={
-            styles.errorMessage
-          }
+          style={styles.errorMessage}
         >
-          Your BloodConnect
-          profile could not be
-          loaded.
+          Your BloodConnect profile could not
+          be loaded.
         </Text>
-
       </View>
     );
   }
@@ -201,65 +190,7 @@ function DashboardRouter() {
     case 'requester':
 
       return (
-        <RoleAppShell
-
-          home={
-            <RequesterDashboardScreen />
-          }
-
-          activity={{
-            title:
-              'My Requests',
-
-            description:
-              'Active and previous emergency requests will be shown here.',
-          }}
-
-          services={{
-            title:
-              'Create Request',
-
-            description:
-              'The emergency blood request creation flow will be connected here.',
-          }}
-
-          profile={{
-            title:
-              'Requester Profile',
-
-            description:
-              'Requester account details will be managed here.',
-          }}
-
-          tabLabels={{
-            activity:
-              'Requests',
-
-            services:
-              'Create',
-          }}
-
-          tabIcons={{
-
-            activity: {
-              icon:
-                'document-text-outline',
-
-              activeIcon:
-                'document-text',
-            },
-
-            services: {
-              icon:
-                'add-circle-outline',
-
-              activeIcon:
-                'add-circle',
-            },
-
-          }}
-
-        />
+        <RequesterNavigator />
       );
 
     // ======================================
@@ -270,7 +201,6 @@ function DashboardRouter() {
 
       return (
         <RoleAppShell
-
           home={
             <HealthcareDashboardScreen />
           }
@@ -308,7 +238,6 @@ function DashboardRouter() {
           }}
 
           tabIcons={{
-
             activity: {
               icon:
                 'hourglass-outline',
@@ -324,9 +253,7 @@ function DashboardRouter() {
               activeIcon:
                 'people',
             },
-
           }}
-
         />
       );
 
@@ -352,25 +279,15 @@ function DashboardRouter() {
           // --------------------------------
 
           activity={{
-
             title:
               'Blood Inventory',
 
             description:
               'Blood stock levels and inventory updates will be connected here.',
-
           }}
 
           // --------------------------------
           // REQUESTS TAB
-          // --------------------------------
-          //
-          // IMPORTANT:
-          //
-          // This will be changed to the actual
-          // RequestManagementScreen after we
-          // update RoleAppShell in Step 2.
-          //
           // --------------------------------
 
           services={{
@@ -386,13 +303,11 @@ function DashboardRouter() {
           // --------------------------------
 
           profile={{
-
             title:
               'Blood Bank Profile',
 
             description:
               'Blood-bank account details will be managed here.',
-
           }}
 
           // --------------------------------
@@ -400,13 +315,11 @@ function DashboardRouter() {
           // --------------------------------
 
           tabLabels={{
-
             activity:
               'Inventory',
 
             services:
               'Requests',
-
           }}
 
           // --------------------------------
@@ -414,29 +327,22 @@ function DashboardRouter() {
           // --------------------------------
 
           tabIcons={{
-
             activity: {
-
               icon:
                 'water-outline',
 
               activeIcon:
                 'water',
-
             },
 
             services: {
-
               icon:
                 'alert-outline',
 
               activeIcon:
                 'alert',
-
             },
-
           }}
-
         />
       );
 
@@ -486,29 +392,22 @@ function DashboardRouter() {
           }}
 
           tabIcons={{
-
             activity: {
-
               icon:
                 'people-outline',
 
               activeIcon:
                 'people',
-
             },
 
             services: {
-
               icon:
                 'settings-outline',
 
               activeIcon:
                 'settings',
-
             },
-
           }}
-
         />
       );
 
@@ -520,29 +419,20 @@ function DashboardRouter() {
 
       return (
         <View
-          style={
-            styles.errorContainer
-          }
+          style={styles.errorContainer}
         >
-
           <Text
-            style={
-              styles.errorTitle
-            }
+            style={styles.errorTitle}
           >
             Invalid user role
           </Text>
 
           <Text
-            style={
-              styles.errorMessage
-            }
+            style={styles.errorMessage}
           >
-            This account does not
-            have a valid
+            This account does not have a valid
             BloodConnect role.
           </Text>
-
         </View>
       );
   }

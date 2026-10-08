@@ -102,16 +102,20 @@ export function AuthProvider({
             'suspended'
           ) {
             await logoutAccount();
+
             setUser(null);
             setProfile(null);
-          } else {
-            setProfile(loadedProfile);
+
+            return;
           }
+
+          setProfile(loadedProfile);
         } catch (error) {
           console.error(
             'Profile loading error:',
             error,
           );
+
           setProfile(null);
         } finally {
           setInitializing(false);
@@ -125,17 +129,20 @@ export function AuthProvider({
   async function login(
     email: string,
     password: string,
-  ) {
-    const loadedProfile = await loginAccount(
-      email,
-      password,
-    );
+  ): Promise<void> {
+    const loadedProfile =
+      await loginAccount(
+        email,
+        password,
+      );
 
     setUser(auth.currentUser);
     setProfile(loadedProfile);
   }
 
-  async function loginWithGoogle() {
+  async function loginWithGoogle(): Promise<
+    'existing' | 'needs-profile'
+  > {
     const loadedProfile =
       await loginWithGoogleWeb();
 
@@ -149,7 +156,7 @@ export function AuthProvider({
 
   async function register(
     input: RegisterInput,
-  ) {
+  ): Promise<void> {
     const newProfile =
       await registerAccount(input);
 
@@ -159,8 +166,9 @@ export function AuthProvider({
 
   async function completeGoogleProfile(
     input: SocialProfileInput,
-  ) {
-    const currentUser = auth.currentUser;
+  ): Promise<void> {
+    const currentUser =
+      auth.currentUser;
 
     if (!currentUser) {
       throw new Error(
@@ -178,16 +186,28 @@ export function AuthProvider({
     setProfile(newProfile);
   }
 
-  async function logout() {
-    await logoutAccount();
-    setUser(null);
-    setProfile(null);
+  async function logout(): Promise<void> {
+    try {
+      await logoutAccount();
+
+      setUser(null);
+      setProfile(null);
+    } catch (error) {
+      console.error(
+        'Logout error:',
+        error,
+      );
+
+      throw error;
+    }
   }
 
   async function resetPassword(
     email: string,
-  ) {
-    await resetAccountPassword(email);
+  ): Promise<void> {
+    await resetAccountPassword(
+      email,
+    );
   }
 
   return (
@@ -210,7 +230,8 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
+  const context =
+    useContext(AuthContext);
 
   if (!context) {
     throw new Error(
