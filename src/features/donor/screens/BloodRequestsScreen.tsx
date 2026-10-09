@@ -101,6 +101,10 @@ export default function BloodRequestsScreen() {
       'all',
     );
 
+  // ==========================================
+  // LOAD REQUESTS
+  // ==========================================
+
   const loadRequests =
     useCallback(
       async () => {
@@ -164,6 +168,10 @@ export default function BloodRequestsScreen() {
     }, [loadRequests]),
   );
 
+  // ==========================================
+  // SEARCH + FILTER
+  // ==========================================
+
   const filteredRequests =
     useMemo(() => {
       const query =
@@ -214,6 +222,10 @@ export default function BloodRequestsScreen() {
       selectedFilter,
     ]);
 
+  // ==========================================
+  // FILTER OPTIONS
+  // ==========================================
+
   const filters: {
     label: string;
     value: FilterType;
@@ -237,6 +249,10 @@ export default function BloodRequestsScreen() {
     },
   ];
 
+  // ==========================================
+  // UI
+  // ==========================================
+
   return (
     <DonorScreenShell>
       <View
@@ -253,6 +269,8 @@ export default function BloodRequestsScreen() {
           }
           keyboardShouldPersistTaps="handled"
         >
+          {/* HEADER */}
+
           <View
             style={
               styles.header
@@ -294,6 +312,8 @@ export default function BloodRequestsScreen() {
             </View>
           </View>
 
+          {/* SEARCH */}
+
           <View
             style={
               styles.searchBox
@@ -324,6 +344,7 @@ export default function BloodRequestsScreen() {
             {search.length >
             0 ? (
               <Pressable
+                hitSlop={8}
                 onPress={() =>
                   setSearch('')
                 }
@@ -338,6 +359,8 @@ export default function BloodRequestsScreen() {
               </Pressable>
             ) : null}
           </View>
+
+          {/* URGENCY FILTERS */}
 
           <ScrollView
             horizontal
@@ -364,13 +387,26 @@ export default function BloodRequestsScreen() {
                         filter.value,
                       )
                     }
-                    style={[
+                    style={({
+                      pressed,
+                    }) => [
                       styles.filter,
 
                       active &&
                         styles.activeFilter,
+
+                      pressed &&
+                        styles.filterPressed,
                     ]}
                   >
+                    {active && (
+                      <View
+                        style={
+                          styles.activeDot
+                        }
+                      />
+                    )}
+
                     <Text
                       style={[
                         styles.filterText,
@@ -388,6 +424,8 @@ export default function BloodRequestsScreen() {
               },
             )}
           </ScrollView>
+
+          {/* CONTENT */}
 
           {loading ? (
             <View
@@ -417,13 +455,19 @@ export default function BloodRequestsScreen() {
                 styles.empty
               }
             >
-              <Ionicons
-                name="water-outline"
-                size={36}
-                color={
-                  COLORS.primary
+              <View
+                style={
+                  styles.emptyIcon
                 }
-              />
+              >
+                <Ionicons
+                  name="water-outline"
+                  size={29}
+                  color={
+                    COLORS.primary
+                  }
+                />
+              </View>
 
               <Text
                 style={
@@ -446,9 +490,12 @@ export default function BloodRequestsScreen() {
               </Text>
 
               <Pressable
-                style={
-                  styles.primaryButton
-                }
+                style={({ pressed }) => [
+                  styles.primaryButton,
+
+                  pressed &&
+                    styles.primaryButtonPressed,
+                ]}
                 onPress={() =>
                   navigation.navigate(
                     'DonorProfile',
@@ -470,13 +517,21 @@ export default function BloodRequestsScreen() {
                 styles.empty
               }
             >
-              <Ionicons
-                name="pause-circle-outline"
-                size={36}
-                color={
-                  COLORS.textMuted
-                }
-              />
+              <View
+                style={[
+                  styles.emptyIcon,
+
+                  styles.emptyIconMuted,
+                ]}
+              >
+                <Ionicons
+                  name="pause-circle-outline"
+                  size={29}
+                  color={
+                    COLORS.textMuted
+                  }
+                />
+              </View>
 
               <Text
                 style={
@@ -504,20 +559,26 @@ export default function BloodRequestsScreen() {
                 styles.empty
               }
             >
-              <Ionicons
-                name="search-outline"
-                size={35}
-                color={
-                  COLORS.textMuted
+              <View
+                style={
+                  styles.emptyIcon
                 }
-              />
+              >
+                <Ionicons
+                  name="search-outline"
+                  size={28}
+                  color={
+                    COLORS.primary
+                  }
+                />
+              </View>
 
               <Text
                 style={
                   styles.emptyTitle
                 }
               >
-                No requests found
+                No matching requests found
               </Text>
 
               <Text
@@ -525,11 +586,46 @@ export default function BloodRequestsScreen() {
                   styles.emptyText
                 }
               >
-                There are no verified
-                compatible requests
-                matching your current
-                filters.
+                Try changing your search
+                or urgency filter.
               </Text>
+
+              {(search.length >
+                0 ||
+                selectedFilter !==
+                  'all') && (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.resetButton,
+
+                    pressed &&
+                      styles.resetButtonPressed,
+                  ]}
+                  onPress={() => {
+                    setSearch('');
+
+                    setSelectedFilter(
+                      'all',
+                    );
+                  }}
+                >
+                  <Ionicons
+                    name="refresh-outline"
+                    size={15}
+                    color={
+                      COLORS.primary
+                    }
+                  />
+
+                  <Text
+                    style={
+                      styles.resetButtonText
+                    }
+                  >
+                    Reset Filters
+                  </Text>
+                </Pressable>
+              )}
             </View>
           ) : (
             <View>
@@ -581,6 +677,10 @@ export default function BloodRequestsScreen() {
   );
 }
 
+// ==========================================
+// STYLES
+// ==========================================
+
 const styles =
   StyleSheet.create({
     screen: {
@@ -595,6 +695,10 @@ const styles =
 
       paddingBottom: 30,
     },
+
+    // ======================================
+    // HEADER
+    // ======================================
 
     header: {
       flexDirection: 'row',
@@ -654,6 +758,10 @@ const styles =
       fontSize: 13,
     },
 
+    // ======================================
+    // SEARCH
+    // ======================================
+
     searchBox: {
       height: 48,
 
@@ -685,6 +793,10 @@ const styles =
       color: COLORS.text,
     },
 
+    // ======================================
+    // FILTERS
+    // ======================================
+
     filters: {
       gap: 8,
 
@@ -692,6 +804,8 @@ const styles =
     },
 
     filter: {
+      minHeight: 36,
+
       paddingHorizontal: 15,
 
       paddingVertical: 8,
@@ -705,6 +819,16 @@ const styles =
 
       borderColor:
         COLORS.border,
+
+      flexDirection: 'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      gap: 6,
     },
 
     activeFilter: {
@@ -713,6 +837,43 @@ const styles =
 
       borderColor:
         COLORS.primary,
+
+      borderWidth: 1.5,
+
+      shadowColor:
+        '#000000',
+
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+
+      shadowOpacity: 0.12,
+
+      shadowRadius: 3,
+
+      elevation: 2,
+    },
+
+    filterPressed: {
+      opacity: 0.8,
+
+      transform: [
+        {
+          scale: 0.97,
+        },
+      ],
+    },
+
+    activeDot: {
+      width: 5,
+
+      height: 5,
+
+      borderRadius: 3,
+
+      backgroundColor:
+        COLORS.white,
     },
 
     filterText: {
@@ -726,6 +887,8 @@ const styles =
 
     activeFilterText: {
       color: COLORS.white,
+
+      fontWeight: '900',
     },
 
     resultCount: {
@@ -738,6 +901,10 @@ const styles =
       color:
         COLORS.textSecondary,
     },
+
+    // ======================================
+    // LOADING
+    // ======================================
 
     loading: {
       paddingVertical: 80,
@@ -754,6 +921,10 @@ const styles =
 
       fontSize: 12,
     },
+
+    // ======================================
+    // EMPTY STATE
+    // ======================================
 
     empty: {
       marginTop: 20,
@@ -779,6 +950,28 @@ const styles =
         'center',
     },
 
+    emptyIcon: {
+      width: 56,
+
+      height: 56,
+
+      borderRadius: 28,
+
+      backgroundColor:
+        COLORS.primaryLight,
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+    },
+
+    emptyIconMuted: {
+      backgroundColor:
+        '#F4F4F4',
+    },
+
     emptyTitle: {
       marginTop: 12,
 
@@ -787,6 +980,8 @@ const styles =
       fontWeight: '800',
 
       color: COLORS.text,
+
+      textAlign: 'center',
     },
 
     emptyText: {
@@ -804,6 +999,10 @@ const styles =
         COLORS.textSecondary,
     },
 
+    // ======================================
+    // BUTTONS
+    // ======================================
+
     primaryButton: {
       marginTop: 16,
 
@@ -817,11 +1016,57 @@ const styles =
         COLORS.primary,
     },
 
+    primaryButtonPressed: {
+      opacity: 0.8,
+    },
+
     primaryButtonText: {
       color: COLORS.white,
 
       fontSize: 11,
 
       fontWeight: '800',
+    },
+
+    resetButton: {
+      minHeight: 40,
+
+      marginTop: 17,
+
+      paddingHorizontal: 15,
+
+      borderRadius: 9,
+
+      borderWidth: 1,
+
+      borderColor:
+        COLORS.primary,
+
+      backgroundColor:
+        COLORS.white,
+
+      flexDirection: 'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      gap: 6,
+    },
+
+    resetButtonPressed: {
+      backgroundColor:
+        COLORS.primaryLight,
+    },
+
+    resetButtonText: {
+      fontSize: 11,
+
+      fontWeight: '800',
+
+      color:
+        COLORS.primary,
     },
   });

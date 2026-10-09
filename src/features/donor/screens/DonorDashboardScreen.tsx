@@ -343,7 +343,9 @@ export default function DonorDashboardScreen() {
   return (
     <DonorScreenShell>
       <View
-        style={styles.screen}
+        style={
+          styles.screen
+        }
       >
         <ScrollView
           contentContainerStyle={
@@ -356,7 +358,9 @@ export default function DonorDashboardScreen() {
           {/* HEADER */}
 
           <View
-            style={styles.header}
+            style={
+              styles.header
+            }
           >
             <View
               style={
@@ -393,8 +397,10 @@ export default function DonorDashboardScreen() {
                 pressed,
               }) => [
                 styles.logout,
+
                 pressed &&
                   styles.logoutPressed,
+
                 loggingOut &&
                   styles.logoutDisabled,
               ]}
@@ -564,6 +570,7 @@ export default function DonorDashboardScreen() {
                   trackColor={{
                     false:
                       '#D6D6D6',
+
                     true:
                       '#8EC5A6',
                   }}
@@ -578,15 +585,21 @@ export default function DonorDashboardScreen() {
               {/* STATISTICS */}
 
               <View
-                style={styles.stats}
+                style={
+                  styles.stats
+                }
               >
                 <StatCard
-                  value={completed}
+                  value={
+                    completed
+                  }
                   label="Donations"
                 />
 
                 <StatCard
-                  value={accepted}
+                  value={
+                    accepted
+                  }
                   label="Accepted"
                 />
 
@@ -619,6 +632,15 @@ export default function DonorDashboardScreen() {
                       'BloodRequests',
                     )
                   }
+                  hitSlop={6}
+                  style={({
+                    pressed,
+                  }) => [
+                    styles.seeAllButton,
+
+                    pressed &&
+                      styles.seeAllButtonPressed,
+                  ]}
                 >
                   <Text
                     style={
@@ -627,6 +649,14 @@ export default function DonorDashboardScreen() {
                   >
                     See All
                   </Text>
+
+                  <Ionicons
+                    name="chevron-forward"
+                    size={14}
+                    color={
+                      COLORS.primary
+                    }
+                  />
                 </Pressable>
               </View>
 
@@ -846,6 +876,7 @@ export default function DonorDashboardScreen() {
                     pressed,
                   }) => [
                     styles.cancelButton,
+
                     pressed &&
                       styles.buttonPressed,
                   ]}
@@ -870,8 +901,10 @@ export default function DonorDashboardScreen() {
                     pressed,
                   }) => [
                     styles.signOutButton,
+
                     pressed &&
                       styles.buttonPressed,
+
                     loggingOut &&
                       styles.logoutDisabled,
                   ]}
@@ -937,20 +970,18 @@ const styles =
       marginTop: 2,
       fontSize: 19,
       fontWeight: '900',
-      color: COLORS.text,
+      color:
+        COLORS.text,
     },
 
     logout: {
       width: 43,
       height: 43,
       borderRadius: 22,
-
       backgroundColor:
         COLORS.primaryLight,
-
       justifyContent:
         'center',
-
       alignItems:
         'center',
     },
@@ -973,10 +1004,8 @@ const styles =
 
     loading: {
       paddingVertical: 80,
-
       justifyContent:
         'center',
-
       alignItems:
         'center',
     },
@@ -984,7 +1013,6 @@ const styles =
     loadingText: {
       marginTop: 12,
       fontSize: 12,
-
       color:
         COLORS.textSecondary,
     },
@@ -994,7 +1022,6 @@ const styles =
     profileBanner: {
       flexDirection: 'row',
       alignItems: 'center',
-
       padding: 13,
 
       backgroundColor:
@@ -1034,7 +1061,9 @@ const styles =
 
     profileBannerTitle: {
       fontSize: 12,
-      fontWeight: '800',
+
+      fontWeight:
+        '800',
 
       color:
         COLORS.primaryDark,
@@ -1044,6 +1073,7 @@ const styles =
       marginTop: 3,
 
       fontSize: 10,
+
       lineHeight: 15,
 
       color:
@@ -1054,6 +1084,7 @@ const styles =
 
     donorCard: {
       padding: 15,
+
       minHeight: 82,
 
       borderRadius: 16,
@@ -1066,7 +1097,8 @@ const styles =
       borderColor:
         COLORS.border,
 
-      flexDirection: 'row',
+      flexDirection:
+        'row',
 
       alignItems:
         'center',
@@ -1095,17 +1127,22 @@ const styles =
         COLORS.primary,
 
       fontSize: 15,
-      fontWeight: '900',
+
+      fontWeight:
+        '900',
     },
 
     donorCardContent: {
       flex: 1,
+
       paddingRight: 7,
     },
 
     activeTitle: {
       fontSize: 14,
-      fontWeight: '800',
+
+      fontWeight:
+        '800',
 
       color:
         COLORS.text,
@@ -1115,6 +1152,7 @@ const styles =
       marginTop: 4,
 
       fontSize: 10,
+
       lineHeight: 15,
 
       color:
@@ -1124,8 +1162,11 @@ const styles =
     // STATISTICS
 
     stats: {
-      flexDirection: 'row',
+      flexDirection:
+        'row',
+
       gap: 8,
+
       marginTop: 11,
     },
 
@@ -1133,9 +1174,11 @@ const styles =
 
     sectionHeader: {
       marginTop: 22,
+
       marginBottom: 10,
 
-      flexDirection: 'row',
+      flexDirection:
+        'row',
 
       alignItems:
         'center',
@@ -1146,10 +1189,38 @@ const styles =
 
     sectionTitle: {
       fontSize: 15,
-      fontWeight: '900',
+
+      fontWeight:
+        '900',
 
       color:
         COLORS.text,
+    },
+
+    seeAllButton: {
+      minHeight: 38,
+
+      paddingHorizontal: 8,
+
+      paddingVertical: 7,
+
+      borderRadius: 8,
+
+      flexDirection:
+        'row',
+
+      alignItems:
+        'center',
+
+      justifyContent:
+        'center',
+
+      gap: 2,
+    },
+
+    seeAllButtonPressed: {
+      backgroundColor:
+        COLORS.primaryLight,
     },
 
     seeAll: {
@@ -1157,7 +1228,9 @@ const styles =
         COLORS.primary,
 
       fontSize: 11,
-      fontWeight: '700',
+
+      fontWeight:
+        '800',
     },
 
     // EMPTY STATES
