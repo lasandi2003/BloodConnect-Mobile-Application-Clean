@@ -38,6 +38,7 @@ import RoleSelectionScreen from '../features/auth/screens/RoleSelectionScreen';
 import RegisterScreen from '../features/auth/screens/RegisterScreen';
 
 import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen';
+import StaffApprovalGate from '../features/auth/components/StaffApprovalGate';
 
 // ========================================
 // DONOR MODULE
@@ -62,7 +63,6 @@ import RequesterNavigator from '../features/emergencyRequest/navigation/Requeste
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
 
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
-import DonorManagementScreen from '../features/inventoryAdmin/screens/DonorManagementScreen';
 
 // ========================================
 // BLOOD BANK REQUEST SCREENS
@@ -195,7 +195,7 @@ function DashboardRouter() {
 
     case 'healthcare':
 
-      return <VerificationMatchingNavigator />;
+      return <StaffApprovalGate role="healthcare"><VerificationMatchingNavigator /></StaffApprovalGate>;
 
     // ======================================
     // BLOOD BANK
@@ -204,6 +204,7 @@ function DashboardRouter() {
     case 'bloodBank':
 
       return (
+        <StaffApprovalGate role="bloodBank">
         <RoleAppShell
 
           // --------------------------------
@@ -345,6 +346,7 @@ function DashboardRouter() {
           }}
 
         />
+        </StaffApprovalGate>
       );
 
     // ======================================
@@ -352,70 +354,7 @@ function DashboardRouter() {
     // ======================================
 
     case 'admin':
-
-      return (
-        <RoleAppShell
-
-          home={
-            <AdminDashboardScreen />
-          }
-
-          activityContent={
-            <DonorManagementScreen />
-          }
-
-          activity={{
-            title:
-              'Donor Management',
-
-            description:
-              'Search and review registered donors.',
-          }}
-
-          services={{
-            title:
-              'System Management',
-
-            description:
-              'Administration tools and system monitoring will be connected here.',
-          }}
-
-          profile={{
-            title:
-              'Admin Profile',
-
-            description:
-              'Administrator account details will be managed here.',
-          }}
-
-          tabLabels={{
-            activity:
-              'Donors',
-
-            services:
-              'Manage',
-          }}
-
-          tabIcons={{
-            activity: {
-              icon:
-                'people-outline',
-
-              activeIcon:
-                'people',
-            },
-
-            services: {
-              icon:
-                'settings-outline',
-
-              activeIcon:
-                'settings',
-            },
-          }}
-
-        />
-      );
+      return <AdminDashboardScreen />;
 
     // ======================================
     // INVALID ROLE
