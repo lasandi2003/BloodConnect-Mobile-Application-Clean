@@ -37,25 +37,17 @@ interface PlaceholderConfig {
 
 interface Props {
   home: ReactNode;
-request-verification-and-donor-matching-
+
   activityContent?: ReactNode;
-  servicesContent?: ReactNode; 
-        dev
+  servicesContent?: ReactNode;
+
   activity: PlaceholderConfig;
-
-  activityContent?: ReactNode;
-
 
   services: PlaceholderConfig;
 
   profile: PlaceholderConfig;
 
   profileContent?: ReactNode;
-
-
-  activityContent?: ReactNode;
-
-  servicesContent?: ReactNode;
 
   reportsContent?: ReactNode;
 
@@ -73,14 +65,14 @@ request-verification-and-donor-matching-
       }
     >
   >;
-request-verification-and-donor-matching-
+
   activeTabColor?: string;
   bottomBorderColor?: string;
   initialTab?: TabKey;
   tabPressHandlers?: Partial<Record<TabKey, () => void>>;
 
   showReports?: boolean;
- dev
+
 }
 
 const defaultTabs = [
@@ -125,15 +117,11 @@ export default function RoleAppShell({
   activityContent,
   servicesContent,
   activity,
-  activityContent,
+
   services,
   profile,
 
   profileContent,
-
-
-  activityContent,
-  servicesContent,
 
   reports,
   reportsContent,
@@ -141,14 +129,14 @@ export default function RoleAppShell({
 
   tabLabels,
   tabIcons,
-  request-verification-and-donor-matching-
+
   activeTabColor = COLORS.primary,
   bottomBorderColor = COLORS.border,
   initialTab = 'home',
   tabPressHandlers,
 
   showReports = false,
-  dev
+
 }: Props) {
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
 
@@ -190,47 +178,16 @@ export default function RoleAppShell({
 
   // INVENTORY
   if (activeTab === 'activity') {
-
-    content = activityContent ?? (
-      <PlaceholderScreen
-        title={activity.title}
-        description={activity.description}
-      />
-
- request-verification-and-donor-matching-
     content = activityContent ?? (
       <PlaceholderScreen title={activity.title} description={activity.description} />
-
     );
-
-    content =
-      activityContent ?? (
-        <PlaceholderScreen
-          title={activity.title}
-          description={activity.description}
-        />
-      ); 
-    dev
   }
 
   // REQUESTS
   if (activeTab === 'services') {
-request-verification-and-donor-matching-
     content = servicesContent ?? (
-      <PlaceholderScreen
-        title={services.title}
-        description={services.description}
-      />
+      <PlaceholderScreen title={services.title} description={services.description} />
     );
-
-    content =
-      servicesContent ?? (
-        <PlaceholderScreen
-          title={services.title}
-          description={services.description}
-        />
-      );
-dev
   }
 
   // PROFILE
@@ -292,20 +249,7 @@ dev
                 setActiveTab(tab.key);
               }}
             >
-request-verification-and-donor-matching-
-              <Ionicons
-                name={
-                  isActive
-                    ? tab.activeIcon
-                    : tab.icon
-                }
-                size={21}
-                color={
-                  isActive
-                    ? activeTabColor
-                    : '#8A8A8A'
-                }
-              />
+
               <View
                 style={[
                   styles.iconContainer,
@@ -322,12 +266,11 @@ request-verification-and-donor-matching-
                   size={21}
                   color={
                     isActive
-                      ? COLORS.primary
+                      ? activeTabColor
                       : '#8A8A8A'
                   }
                 />
               </View> 
-              dev
 
               <Text
                 style={[

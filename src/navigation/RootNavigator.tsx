@@ -45,9 +45,7 @@ import ForgotPasswordScreen from '../features/auth/screens/ForgotPasswordScreen'
 
 import DonorNavigator from '../features/donor/navigation/DonorNavigator';
 
- request-verification-and-donor-matching-
 // Other role dashboards
-import RequesterDashboardScreen from '../features/emergencyRequest/screens/RequesterDashboardScreen';
 import VerificationMatchingNavigator from '../features/verificationMatching/navigation/VerificationMatchingNavigator';
 
 // ========================================
@@ -60,9 +58,7 @@ import RequesterNavigator from '../features/emergencyRequest/navigation/Requeste
 // OTHER ROLE DASHBOARDS
 // ========================================
 
-import HealthcareDashboardScreen from '../features/verificationMatching/screens/HealthcareDashboardScreen';
 
- dev
 import BloodBankDashboardScreen from '../features/inventoryAdmin/screens/BloodBankDashboardScreen';
 
 import AdminDashboardScreen from '../features/inventoryAdmin/screens/AdminDashboardScreen';
@@ -198,69 +194,8 @@ function DashboardRouter() {
     // ======================================
 
     case 'healthcare':
- request-verification-and-donor-matching-
+
       return <VerificationMatchingNavigator />;
-
-      return (
-        <RoleAppShell
-
-          home={
-            <HealthcareDashboardScreen />
-          }
-
-          activity={{
-            title:
-              'Pending Requests',
-
-            description:
-              'Requests waiting for healthcare verification will be shown here.',
-          }}
-
-          services={{
-            title:
-              'Donor Matching',
-
-            description:
-              'Compatible donor matching tools will be connected here.',
-          }}
-
-          profile={{
-            title:
-              'Healthcare Profile',
-
-            description:
-              'Doctor or nurse account details will be managed here.',
-          }}
-
-          tabLabels={{
-            activity:
-              'Pending',
-
-            services:
-              'Matches',
-          }}
-
-          tabIcons={{
-            activity: {
-              icon:
-                'hourglass-outline',
-
-              activeIcon:
-                'hourglass',
-            },
-
-            services: {
-              icon:
-                'people-outline',
-
-              activeIcon:
-                'people',
-            },
-          }}
-
-        />
-      );
- dev
 
     // ======================================
     // BLOOD BANK
@@ -424,11 +359,11 @@ function DashboardRouter() {
           home={
             <AdminDashboardScreen />
           }
- request-verification-and-donor-matching-
+
           activityContent={
             <DonorManagementScreen />
           }
- dev
+
           activity={{
             title:
               'Donor Management',
@@ -641,8 +576,5 @@ const styles =
         'center',
 
     },
- request-verification-and-donor-matching-
-  });
 
-  }); 
-dev
+  });
