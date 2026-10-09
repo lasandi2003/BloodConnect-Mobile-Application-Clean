@@ -27,7 +27,8 @@ function RequesterHome({ navigation }: NativeStackScreenProps<RequesterStackPara
 
   return (
     <RoleAppShell
-      home={<RequesterDashboardScreen onCreateRequest={handleCreateRequest} onRequestHistory={() => navigation.navigate('RequestHistory')} />}
+      home={<RequesterDashboardScreen onCreateRequest={handleCreateRequest} onRequestHistory={() => navigation.navigate('RequestHistory')} onOpenRequest={requestId => navigation.navigate('RequestStatus', { requestId })} />}
+      tabPressHandlers={{ services: handleCreateRequest }}
       activityContent={<RequestHistoryContent onOpenRequest={requestId => navigation.navigate('RequestStatus', { requestId })} />}
       profileContent={<RequesterProfileScreen />}
       activity={{

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 import {
   Alert,
+  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -12,17 +13,53 @@ import {
 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '../../../constants/colors';
 import { useAuth } from '../../auth/context/AuthContext';
+import { watchRequesterHistory, getRequestHistoryErrorMessage, type RequestHistoryItem } from '../services/emergencyRequestService';
+import { canCancelRequest, getRequestStatusView } from '../utils/requestStatus';
+import { formatDisplayDate } from '../utils/hospitalValidation';
 
 interface Props {
   onCreateRequest: () => void;
   onRequestHistory: () => void;
+  onOpenRequest: (requestId: string) => void;
 }
 
-export default function RequesterDashboardScreen({ onCreateRequest, onRequestHistory }: Props) {
-  const { logout } = useAuth();
+export default function RequesterDashboardScreen({ onCreateRequest, onRequestHistory, onOpenRequest }: Props) {
+  const { logout, user, profile } = useAuth();
+  const [history, setHistory] = useState<{ uid: string; requests: RequestHistoryItem[]; cached: boolean; skipped: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [retry, setRetry] = useState(0);
+  const uid = user?.uid;
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setHistory(null);
+    setLoading(true);
+    setError('');
+    if (!uid) {
+      setLoading(false);
+      setError('Please sign in to view your requests.');
+      return () => { active = false; };
+    }
+    const stop = watchRequesterHistory(uid, (requests, cached, skipped) => {
+      if (!active) return;
+      setHistory({ uid, requests, cached, skipped });
+      setLoading(false);
+      setError('');
+    }, failure => {
+      if (!active) return;
+      setHistory(null);
+      setLoading(false);
+      setError(getRequestHistoryErrorMessage(failure));
+    });
+    return () => { active = false; stop(); };
+  }, [uid, retry]));
+  const current = history?.uid === uid ? history : null;
+  const activeRequests = current?.requests.filter(request => canCancelRequest(request.status)) ?? [];
+  const greetingName = profile?.uid === uid ? profile?.fullName : user?.displayName;
   const [logoutModalVisible, setLogoutModalVisible] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -74,6 +111,7 @@ export default function RequesterDashboardScreen({ onCreateRequest, onRequestHis
           </View>
 
           <Text style={styles.subtitle}>Create and monitor emergency requests</Text>
+          <Text style={styles.subtitle}>Welcome{greetingName ? `, ${greetingName}` : ''}</Text>
 
           <Pressable
             style={({ pressed }) => [styles.createButton, pressed && styles.pressed]}
@@ -87,16 +125,24 @@ export default function RequesterDashboardScreen({ onCreateRequest, onRequestHis
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Active Requests</Text>
-          <View style={styles.activeCard}>
-            <View style={styles.emptyIcon}>
-              <Ionicons name="water-outline" size={25} color={COLORS.primary} />
-            </View>
-            <Text style={styles.cardTitle}>Active requests will appear here</Text>
-            <Text style={styles.cardDescription}>
-              Create an emergency blood request to get started.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>Active Requests{current ? ` (${activeRequests.length})` : ''}</Text>
+          {loading && <ActivityIndicator color={COLORS.primary} accessibilityLabel="Loading active requests" />}
+          {!!error && <View style={styles.activeCard}><Text style={styles.errorText}>{error}</Text><Pressable accessibilityRole="button" onPress={() => setRetry(value => value + 1)} style={styles.retryButton}><Text style={styles.statusText}>Try again</Text></Pressable></View>}
+          {current?.cached && <Text style={styles.cardDescription}>Showing cached requests. Waiting for the latest saved status.</Text>}
+          {!!current?.skipped && <Text style={styles.errorText}>Some saved requests have incomplete details. Open History for more information.</Text>}
+          {!loading && !error && current && !current.cached && !current.skipped && activeRequests.length === 0 && (
+            <View style={styles.activeCard}><View style={styles.emptyIcon}><Ionicons name="water-outline" size={25} color={COLORS.primary} /></View><Text style={styles.cardTitle}>No active requests</Text><Text style={styles.cardDescription}>Create a request or check your previous requests in History.</Text></View>
+          )}
+          {activeRequests.slice(0, 3).map(request => (
+            <Pressable key={request.requestId} style={styles.requestCard} onPress={() => onOpenRequest(request.requestId)} accessibilityRole="button" accessibilityLabel={`View ${request.bloodGroup} request status`}>
+              <View style={styles.requestRow}><Text style={styles.cardTitle}>{request.bloodGroup} · {request.unitsRequired === null ? 'Units not recorded' : `${request.unitsRequired} unit(s)`}</Text><Ionicons name="chevron-forward" size={21} color={COLORS.primary} /></View>
+              <Text style={styles.cardDescription}>{request.hospitalName}</Text>
+              <Text style={styles.cardDescription}>Required: {request.requiredDate ? formatDisplayDate(request.requiredDate) : 'Not recorded'}</Text>
+              <View style={styles.statusBadge}><Text style={styles.statusText}>{getRequestStatusView(request.status, request.verified).label}</Text></View>
+              <Text style={styles.cardDescription}>Tap to view progress</Text>
+            </Pressable>
+          ))}
+          {activeRequests.length > 3 && <Pressable onPress={onRequestHistory} accessibilityRole="button" style={styles.retryButton}><Text style={styles.statusText}>View all {activeRequests.length} active requests in History</Text></Pressable>}
         </View>
 
         <View style={styles.section}>
@@ -160,6 +206,12 @@ export default function RequesterDashboardScreen({ onCreateRequest, onRequestHis
 }
 
 const styles = StyleSheet.create({
+  requestCard: { padding: 18, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, marginBottom: 12, backgroundColor: COLORS.white },
+  requestRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  statusBadge: { alignSelf: 'flex-start', borderRadius: 8, backgroundColor: COLORS.softBackground, paddingHorizontal: 10, paddingVertical: 7, marginTop: 12 },
+  statusText: { color: COLORS.primary, fontWeight: '600', fontSize: 13 },
+  errorText: { color: COLORS.danger, lineHeight: 20 },
+  retryButton: { minHeight: 44, justifyContent: 'center', paddingVertical: 10 },
   safe: {
     flex: 1,
     backgroundColor: COLORS.white,
