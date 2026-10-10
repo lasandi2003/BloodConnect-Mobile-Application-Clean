@@ -1,12 +1,23 @@
-import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../../../constants/colors';
 import { useAuth } from '../../auth/context/AuthContext';
 
 export default function RequesterProfileScreen() {
-  const { user, profile, initializing } = useAuth();
+  const { user, profile, initializing, logout } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState('');
+  const busy = useRef(false);
+  async function signOut() {
+    if (busy.current) return;
+    busy.current = true; setLoggingOut(true); setLogoutError('');
+    try { await logout(); setConfirmLogout(false); }
+    catch { setLogoutError('Unable to sign out. Please try again.'); }
+    finally { busy.current = false; setLoggingOut(false); }
+  }
   // AuthContext already loads users/{uid}. Do not show a previous user's profile.
   const account = user && profile?.uid === user.uid ? profile : null;
   const name = account?.fullName || user?.displayName || 'Requester';
@@ -32,9 +43,22 @@ export default function RequesterProfileScreen() {
               <ProfileField label="Email" value={account?.email || user.email} />
               <ProfileField label="Contact number" value={account?.phone || user.phoneNumber} />
             </View>
+            <Pressable style={styles.signOutButton} onPress={() => { setLogoutError(''); setConfirmLogout(true); }} accessibilityRole="button" accessibilityLabel="Sign out of BloodConnect">
+              <Ionicons name="log-out-outline" size={22} color={COLORS.primary} accessible={false} /><Text style={styles.signOutText}>Sign Out</Text>
+            </Pressable>
           </>
         )}
       </ScrollView>
+      <Modal visible={confirmLogout && !!user} transparent animationType="fade" onRequestClose={() => { if (!busy.current) setConfirmLogout(false); }}>
+        <View style={styles.overlay}><View style={styles.dialog} accessibilityViewIsModal>
+          <Text style={styles.sectionTitle}>Sign out?</Text><Text style={styles.message}>You will return to the login screen.</Text>
+          {!!logoutError && <Text style={styles.error} accessibilityLiveRegion="polite">{logoutError}</Text>}
+          <View style={styles.actions}>
+            <Pressable disabled={loggingOut} style={styles.signOutButton} onPress={() => setConfirmLogout(false)} accessibilityRole="button"><Text style={styles.signOutText}>Cancel</Text></Pressable>
+            <Pressable disabled={loggingOut} style={[styles.signOutButton, styles.confirmButton]} onPress={() => void signOut()} accessibilityRole="button" accessibilityState={{ disabled: loggingOut, busy: loggingOut }}><Text style={styles.confirmText}>{loggingOut ? 'Signing out...' : 'Sign Out'}</Text></Pressable>
+          </View>
+        </View></View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -44,6 +68,9 @@ function ProfileField({ label, value }: { label: string; value?: string | null }
 }
 
 const styles = StyleSheet.create({
+  signOutButton: { minHeight: 48, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  signOutText: { color: COLORS.primary, fontWeight: '700', fontSize: 16 }, confirmButton: { backgroundColor: COLORS.primary, borderColor: COLORS.primary }, confirmText: { color: COLORS.white, fontWeight: '700' },
+  overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.4)' }, dialog: { width: '100%', maxWidth: 380, padding: 24, borderRadius: 20, backgroundColor: COLORS.white, gap: 16 }, actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 }, error: { color: COLORS.danger, lineHeight: 22 },
   initials: { color: COLORS.primary, fontSize: 28, fontWeight: '700' },
   roleBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: COLORS.softBackground, borderRadius: 20, paddingVertical: 8, paddingHorizontal: 12 },
   status: { color: COLORS.textSecondary, fontSize: 13 },
