@@ -34,7 +34,6 @@ const EMERGENCY_REQUESTS =
 const DONOR_RESPONSES =
   'donorResponses';
 
-
 /*
  * Blood compatibility for red-cell donation.
  *
@@ -97,7 +96,6 @@ const COMPATIBILITY: Record<
   ],
 };
 
-
 /*
  * Convert Firestore blood group value
  * to our BloodGroup type.
@@ -132,10 +130,15 @@ function normalizeBloodGroup(
   return 'O+';
 }
 
-
 /*
  * Normalize urgency values coming
  * from different team modules.
+ *
+ * Supported values:
+ *
+ * critical / emergency -> critical
+ * urgent / high        -> urgent
+ * normal / others      -> normal
  */
 function normalizeUrgency(
   value: unknown,
@@ -146,15 +149,15 @@ function normalizeUrgency(
       .toLowerCase();
 
   if (
-    urgency ===
-    'critical'
+    urgency === 'critical' ||
+    urgency === 'emergency'
   ) {
     return 'critical';
   }
 
   if (
-    urgency ===
-    'urgent'
+    urgency === 'urgent' ||
+    urgency === 'high'
   ) {
     return 'urgent';
   }
@@ -162,22 +165,18 @@ function normalizeUrgency(
   return 'normal';
 }
 
-
 /*
  * Convert a Firestore emergency request
  * document into the format expected by
  * the donor screens.
  *
  * Multiple alternative field names are
- * supported to make later integration
- * with the Requester module easier.
+ * supported to make integration with
+ * other team modules easier.
  */
 function normalizeRequest(
   id: string,
-  data: Record<
-    string,
-    any
-  >,
+  data: Record<string, any>,
 ): EmergencyRequest {
   const status =
     String(
@@ -188,12 +187,9 @@ function normalizeRequest(
       .toLowerCase();
 
   const verified =
-    data.verified ===
-      true ||
-    data.isVerified ===
-      true ||
-    status ===
-      'verified';
+    data.verified === true ||
+    data.isVerified === true ||
+    status === 'verified';
 
   return {
     id,
@@ -217,6 +213,7 @@ function normalizeRequest(
 
     location:
       data.location ??
+      data.Location ??
       data.hospitalLocation ??
       data.address ??
       'Location unavailable',
@@ -266,7 +263,6 @@ function normalizeRequest(
   };
 }
 
-
 /*
  * ========================================
  * DONOR PROFILE
@@ -314,8 +310,7 @@ export async function getDonorProfile(
         '',
 
       age:
-        data.age !==
-          undefined &&
+        data.age !== undefined &&
         data.age !== null
           ? Number(
               data.age,
@@ -362,7 +357,6 @@ export async function getDonorProfile(
         null,
     };
   }
-
 
   /*
    * Donor profile has not yet been created.
@@ -543,7 +537,6 @@ export async function saveDonorProfile(
   );
 }
 
-
 export async function updateDonorAvailability(
   userId: string,
   isAvailable: boolean,
@@ -567,7 +560,6 @@ export async function updateDonorAvailability(
     },
   );
 }
-
 
 /*
  * ========================================
@@ -657,7 +649,6 @@ export async function getCompatibleRequests(
   );
 }
 
-
 export async function getEmergencyRequestById(
   requestId: string,
 ): Promise<
@@ -686,7 +677,6 @@ export async function getEmergencyRequestById(
     snapshot.data(),
   );
 }
-
 
 /*
  * ========================================
@@ -720,9 +710,6 @@ export async function saveDonorResponse(
 
   /*
    * Check whether donor already responded.
-   *
-   * Firestore rules allow this GET because
-   * the document ID ends with the donor UID.
    */
   const existing =
     await getDoc(
@@ -792,15 +779,9 @@ export async function saveDonorResponse(
   return responseId;
 }
 
-
 /*
  * Read only the currently logged-in
  * donor's responses.
- *
- * IMPORTANT:
- * We query Firestore using donorId.
- * We do NOT download every donor's
- * responses and filter them locally.
  */
 export async function getDonorResponses(
   donorId: string,
@@ -885,7 +866,6 @@ export async function getDonorResponses(
   );
 }
 
-
 /*
  * Check whether a donor has already
  * responded to one particular request.
@@ -949,7 +929,6 @@ export async function getDonorResponseForRequest(
   };
 }
 
-
 /*
  * ========================================
  * UPDATE RESPONSE
@@ -975,7 +954,6 @@ export async function withdrawDonorResponse(
     },
   );
 }
-
 
 /*
  * ========================================
