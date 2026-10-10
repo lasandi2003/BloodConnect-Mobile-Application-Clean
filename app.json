@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "BloodConnect-Mobile-Application-Clean",
+    "name": "BloodConnect",
     "slug": "BloodConnect-Mobile-Application-Clean",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/bloodconnect-logo.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true
@@ -19,7 +19,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/bloodconnect-logo.png"
     },
     "plugins": [
       "@react-native-community/datetimepicker",
