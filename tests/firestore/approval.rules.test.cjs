@@ -308,6 +308,16 @@ test('centre writes remain denied to non-admin and suspended accounts', async ()
 });
 
 const centreFixture = { name: 'Test Centre', address: 'Test Address', district: 'Test District', phone: '+94 77 123 4567', latitude: 0, longitude: 0, isActive: true };
+test('opening hours are optional, validated and writable only by active admin', async () => {
+  const reference = doc(db('admin'), 'donationCentres', 'hours');
+  await assertSucceeds(setDoc(reference, centreFixture));
+  await assertSucceeds(updateDoc(reference, { openingHours: 'Mon–Fri: 8:00 AM–4:00 PM\nSat–Sun: closed' }));
+  assert.ok((await assertSucceeds(getDoc(doc(db('donor'), 'donationCentres', 'hours')))).data().openingHours);
+  await assertFails(updateDoc(reference, { openingHours: 123 }));
+  await assertFails(updateDoc(reference, { openingHours: 'x'.repeat(501) }));
+  for (const uid of ['donor', 'requester', 'health-approved', 'bank-approved', 'suspended-admin']) await assertFails(updateDoc(doc(db(uid), 'donationCentres', 'hours'), { openingHours: '24 hours' }));
+  await assertSucceeds(updateDoc(reference, { openingHours: '' }));
+});
 test('active admin can create, read all, edit, deactivate and reactivate; deletion is denied', async () => {
   const database = db('admin');
   const reference = doc(database, 'donationCentres', 'managed');

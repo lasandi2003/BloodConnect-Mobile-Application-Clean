@@ -18,6 +18,15 @@ function setup(role = 'admin', status = 'active', saved = null) {
   return { service: module.exports, writes };
 }
 const form = { name: 'Test Centre', address: 'Test Address', district: 'Test District', phone: '+94 77 123 4567', latitude: '0', longitude: '-180', isActive: true };
+test('opening hours trim, validate length and can be cleared without deleting the centre', async () => {
+  const base = setup();
+  const fields = base.service.validateCentre({ ...form, openingHours: '  Mon–Fri: 8 AM–4 PM  ' }).fields;
+  assert.equal(fields.openingHours, 'Mon–Fri: 8 AM–4 PM');
+  assert.equal(base.service.validateCentre({ ...form, openingHours: 'x'.repeat(501) }).fields, null);
+  const update = setup('admin', 'active', fields);
+  await update.service.saveAdminCentre('admin', 'centre', { ...fields, openingHours: '' }, { id: 'centre', data: fields });
+  assert.equal(update.writes[0].fields.openingHours, '');
+});
 test('validation accepts numeric zero and boundaries and trims required text', () => {
   const { service } = setup();
   const result = service.validateCentre({ ...form, name: ' Test Centre ' });

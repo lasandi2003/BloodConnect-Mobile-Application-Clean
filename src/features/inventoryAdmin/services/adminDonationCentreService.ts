@@ -3,18 +3,20 @@ import { auth, db } from '../../../config/firebase';
 
 export interface CentreFields {
   name: string; address: string; district: string; phone: string;
-  latitude: number; longitude: number; isActive: boolean;
+  latitude: number; longitude: number; isActive: boolean; openingHours?: string;
 }
 export interface AdminCentre { id: string; data: Record<string, unknown> }
-export type CentreForm = Record<'name' | 'address' | 'district' | 'phone' | 'latitude' | 'longitude', string> & { isActive: boolean };
-const keys = ['name', 'address', 'district', 'phone', 'latitude', 'longitude', 'isActive'] as const;
+export type CentreForm = Record<'name' | 'address' | 'district' | 'phone' | 'latitude' | 'longitude', string> & { isActive: boolean; openingHours?: string };
+const keys = ['name', 'address', 'district', 'phone', 'latitude', 'longitude', 'isActive', 'openingHours'] as const;
 
 export function centreForm(data: Record<string, unknown> = {}): CentreForm {
   const text = (key: string) => typeof data[key] === 'string' || typeof data[key] === 'number' ? String(data[key]) : '';
-  return { name: text('name'), address: text('address'), district: text('district'), phone: text('phone'), latitude: text('latitude'), longitude: text('longitude'), isActive: data.isActive !== false };
+  return { name: text('name'), address: text('address'), district: text('district'), phone: text('phone'), latitude: text('latitude'), longitude: text('longitude'), isActive: data.isActive !== false, openingHours: text('openingHours') };
 }
 export function validateCentre(form: CentreForm): { fields: CentreFields | null; errors: Partial<Record<keyof CentreForm, string>> } {
   const errors: Partial<Record<keyof CentreForm, string>> = {};
+  const openingHours = (form.openingHours ?? '').trim();
+  if (openingHours.length > 500) errors.openingHours = 'Keep opening hours within 500 characters.';
   for (const key of ['name', 'address', 'district', 'phone'] as const) {
     if (!form[key].trim()) errors[key] = 'This field is required.';
     else if (form[key].trim().length > (key === 'address' ? 500 : key === 'phone' ? 40 : 150)) errors[key] = 'Please shorten this value.';
@@ -24,7 +26,7 @@ export function validateCentre(form: CentreForm): { fields: CentreFields | null;
     const limit = key === 'latitude' ? 90 : 180;
     if (!form[key].trim() || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(form[key].trim()) || !Number.isFinite(Number(form[key])) || Math.abs(Number(form[key])) > limit) errors[key] = `Enter a number between -${limit} and ${limit}.`;
   }
-  return { errors, fields: Object.keys(errors).length ? null : { name: form.name.trim(), address: form.address.trim(), district: form.district.trim(), phone: form.phone.trim(), latitude: Number(form.latitude), longitude: Number(form.longitude), isActive: form.isActive } };
+  return { errors, fields: Object.keys(errors).length ? null : { name: form.name.trim(), address: form.address.trim(), district: form.district.trim(), phone: form.phone.trim(), latitude: Number(form.latitude), longitude: Number(form.longitude), isActive: form.isActive, ...(openingHours ? { openingHours } : {}) } };
 }
 export function watchAdminCentres(uid: string, change: (centres: AdminCentre[], cached: boolean) => void, error: (failure: unknown) => void) {
   if (auth.currentUser?.uid !== uid) { error(new Error('Please sign in again.')); return () => {}; }
@@ -44,7 +46,7 @@ export async function saveAdminCentre(uid: string, id: string, fields: CentreFie
     const saved = await transaction.get(reference);
     if (saved.exists() && keys.every(key => saved.data()[key] === checked.fields![key])) return;
     if (original ? !saved.exists() || keys.some(key => saved.data()[key] !== original.data[key]) : saved.exists()) throw new Error('This centre changed. Close the editor and reopen the latest details before saving.');
-    if (original) transaction.update(reference, { ...checked.fields });
+    if (original) transaction.update(reference, { ...checked.fields, ...(original.data.openingHours !== undefined && !checked.fields!.openingHours ? { openingHours: '' } : {}) });
     else transaction.set(reference, checked.fields);
   });
 }

@@ -6,6 +6,7 @@ export interface DonationCentre extends Coordinates {
   address: string;
   district: string;
   phone: string;
+  openingHours?: string;
   isActive: true;
 }
 

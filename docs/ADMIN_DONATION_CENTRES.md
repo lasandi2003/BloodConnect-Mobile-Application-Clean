@@ -1,5 +1,9 @@
 # Admin donation centre management
 
+## Confirmed opening hours
+
+Admins can add/edit optional `openingHours` text (up to 500 characters), for example confirmed weekday/weekend schedules. The donor card displays the saved schedule with a clock icon. Blank/missing hours show “Call to confirm opening hours”. No automatic “open now” or donation availability claim is made. Existing records need no migration. Clear the field to remove a displayed schedule; status toggles preserve it. Manually publish the updated complete `firestore.approval.rules` before saving hours; the schema now permits the original seven fields plus this optional string, writable only by active admins. Test adding, editing, clearing and deactivating a centre with hours, and viewing a legacy centre without hours as a donor.
+
 Sign in with an existing active admin account. Open **Manage Donation Centres** on the Admin Dashboard (or the **Manage Centres** tab).
 
 The screen reads all `donationCentres` records, searches name/district, and adds or edits the seven listing fields: `name`, `address`, `district`, `phone`, numeric `latitude` and `longitude`, and boolean `isActive`. Coordinates must be within ±90/±180; phone numbers contain 6–15 digits with optional international prefix and formatting. Use real, verified public listing information only. Active is listing visibility, not a claim of current donation availability.

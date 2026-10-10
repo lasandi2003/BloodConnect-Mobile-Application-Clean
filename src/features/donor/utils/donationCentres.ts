@@ -14,7 +14,8 @@ export function parseDonationCentre(id: string, data: Record<string, unknown>): 
   if (!name || !address || !district || !phone || !/^\+?[\d\s().-]+$/.test(phone)) return null;
   const digits = phone.replace(/\D/g, '');
   if (digits.length < 6 || digits.length > 15) return null;
-  return { id, name, address, district, phone, ...coordinates, isActive: true };
+  const openingHours = text(data.openingHours);
+  return { id, name, address, district, phone, ...coordinates, isActive: true, ...(openingHours && openingHours.length <= 500 ? { openingHours } : {}) };
 }
 
 export function haversineKm(from: Coordinates, to: Coordinates): number {
