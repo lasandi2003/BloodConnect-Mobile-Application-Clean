@@ -5,6 +5,7 @@ import React, {
 
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -274,7 +275,7 @@ export default function LoginScreen({
           disabled={googleLoading}
           onPress={handleGoogleLogin}
         >
-          <Text style={styles.googleIcon}>G</Text>
+          <Image source={require('../../../../assets/google-g-logo.png')} style={styles.googleIcon} resizeMode="contain" accessible={false} />
           <Text style={styles.googleText}>
             {googleLoading
               ? 'Connecting...'
@@ -437,9 +438,8 @@ const styles = StyleSheet.create({
 
   googleIcon: {
     marginRight: 12,
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#4285F4',
+    width: 20,
+    height: 20,
   },
 
   googleText: {
