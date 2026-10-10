@@ -274,3 +274,77 @@ test('unauthenticated and unmatched paths deny all collection access', async () 
   for (const name of ['users', 'donorProfiles', 'emergencyRequests', 'donorResponses', 'donorMatches', 'bloodInventory']) await assertFails(getDocs(collection(database, name)));
   await assertFails(setDoc(doc(db('admin'), 'unconfiguredCollection', 'anything'), { value: true }));
 });
+
+test('donor locator can query/read active centres but cannot read inactive centres or an unfiltered collection', async () => {
+  await env.withSecurityRulesDisabled(async context => {
+    const database = context.firestore();
+    const centre = { name: 'Test Centre', address: 'Test Address', district: 'Test District', phone: '0771234567', latitude: 0, longitude: 0 };
+    await setDoc(doc(database, 'donationCentres', 'active'), { ...centre, isActive: true });
+    await setDoc(doc(database, 'donationCentres', 'inactive'), { ...centre, isActive: false });
+  });
+  const database = db('donor');
+  const result = await assertSucceeds(getDocs(query(collection(database, 'donationCentres'), where('isActive', '==', true))));
+  assert.equal(result.size, 1);
+  await assertSucceeds(getDoc(doc(database, 'donationCentres', 'active')));
+  await assertFails(getDoc(doc(database, 'donationCentres', 'inactive')));
+  await assertFails(getDocs(collection(database, 'donationCentres')));
+});
+
+test('locator data is denied to anonymous and non-donor accounts', async () => {
+  await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'donationCentres', 'active'), { isActive: true }));
+  for (const database of [env.unauthenticatedContext().firestore(), db('requester'), db('health-approved'), db('bank-approved')]) {
+    await assertFails(getDoc(doc(database, 'donationCentres', 'active')));
+  }
+});
+
+test('centre writes remain denied to non-admin and suspended accounts', async () => {
+  await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'donationCentres', 'active'), { isActive: true }));
+  for (const uid of ['donor', 'requester', 'suspended-admin', 'health-approved', 'bank-approved']) {
+    const database = db(uid);
+    await assertFails(setDoc(doc(database, 'donationCentres', 'new'), { isActive: true }));
+    await assertFails(updateDoc(doc(database, 'donationCentres', 'active'), { isActive: false }));
+    await assertFails(deleteDoc(doc(database, 'donationCentres', 'active')));
+  }
+});
+
+const centreFixture = { name: 'Test Centre', address: 'Test Address', district: 'Test District', phone: '+94 77 123 4567', latitude: 0, longitude: 0, isActive: true };
+test('active admin can create, read all, edit, deactivate and reactivate; deletion is denied', async () => {
+  const database = db('admin');
+  const reference = doc(database, 'donationCentres', 'managed');
+  await assertSucceeds(runTransaction(database, async transaction => {
+    await transaction.get(doc(database, 'users', 'admin'));
+    assert.equal((await transaction.get(reference)).exists(), false);
+    transaction.set(reference, centreFixture);
+  }));
+  await assertSucceeds(getDocs(collection(database, 'donationCentres')));
+  await assertSucceeds(updateDoc(reference, { name: 'Edited Centre', latitude: -90, longitude: 180 }));
+  await assertSucceeds(updateDoc(reference, { isActive: false }));
+  await assertSucceeds(getDoc(reference));
+  assert.equal((await assertSucceeds(getDocs(query(collection(db('donor'), 'donationCentres'), where('isActive', '==', true))))).size, 0);
+  await assertFails(getDoc(doc(db('donor'), 'donationCentres', 'managed')));
+  await assertSucceeds(updateDoc(reference, { isActive: true }));
+  assert.equal((await assertSucceeds(getDocs(query(collection(db('donor'), 'donationCentres'), where('isActive', '==', true))))).size, 1);
+  await assertFails(deleteDoc(reference));
+});
+test('valid centre writes are denied to anonymous, non-admin and suspended admin accounts', async () => {
+  await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), 'donationCentres', 'managed'), centreFixture));
+  for (const database of [env.unauthenticatedContext().firestore(), ...['donor', 'requester', 'health-approved', 'bank-approved', 'suspended-admin'].map(db)]) {
+    await assertFails(setDoc(doc(database, 'donationCentres', 'new'), centreFixture));
+    await assertFails(updateDoc(doc(database, 'donationCentres', 'managed'), { name: 'Unauthorized Edit' }));
+    await assertFails(updateDoc(doc(database, 'donationCentres', 'managed'), { isActive: false }));
+    await assertFails(deleteDoc(doc(database, 'donationCentres', 'managed')));
+  }
+  await assertFails(getDocs(collection(db('suspended-admin'), 'donationCentres')));
+});
+test('centre schema rejects missing, whitespace, invalid coordinates, phone, extra fields and invalid status', async () => {
+  const database = db('admin');
+  const reference = doc(database, 'donationCentres', 'validation');
+  for (const change of [{ name: '   ' }, { address: '' }, { district: '' }, { phone: 'abc123456' }, { phone: '123' }, { latitude: 91 }, { latitude: '0' }, { longitude: -181 }, { longitude: NaN }, { isActive: 'true' }, { privateNotes: 'Not public listing data' }]) await assertFails(setDoc(reference, { ...centreFixture, ...change }));
+  const missing = { ...centreFixture }; delete missing.phone;
+  await assertFails(setDoc(reference, missing));
+  await assertSucceeds(setDoc(reference, centreFixture));
+  await assertSucceeds(updateDoc(reference, { address: 'Test Address\nSecond Line' }));
+  await assertFails(updateDoc(reference, { address: ' \n\t ' }));
+  await assertFails(updateDoc(reference, { phone: deleteField() }));
+  await assertFails(updateDoc(reference, { latitude: 999 }));
+});

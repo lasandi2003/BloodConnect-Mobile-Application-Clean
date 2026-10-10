@@ -4,6 +4,7 @@ import type {
 
 export type DonorStackParamList = {
   DonorDashboard: undefined;
+  FindDonationCentres: undefined;
 
   BloodRequests: undefined;
 

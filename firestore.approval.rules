@@ -223,5 +223,25 @@ service cloud.firestore {
         && request.resource.data.availableUnits is int && request.resource.data.availableUnits >= 0
         && request.resource.data.status in ['Normal', 'Low Stock'];
     }
+    function validDonationCentre(data) {
+      return data.keys().hasAll(['name', 'address', 'district', 'phone', 'latitude', 'longitude', 'isActive'])
+        && data.keys().hasOnly(['name', 'address', 'district', 'phone', 'latitude', 'longitude', 'isActive'])
+        && data.name is string && data.name.size() <= 150 && data.name.matches('[\\s\\S]*[^\\s][\\s\\S]*')
+        && data.address is string && data.address.size() <= 500 && data.address.matches('[\\s\\S]*[^\\s][\\s\\S]*')
+        && data.district is string && data.district.size() <= 150 && data.district.matches('[\\s\\S]*[^\\s][\\s\\S]*')
+        && data.phone is string && data.phone.size() <= 40
+        && data.phone.matches('\\+?([ ().-]*[0-9]){6,15}[ ().-]*')
+        && data.latitude is number && data.latitude >= -90 && data.latitude <= 90
+        && data.longitude is number && data.longitude >= -180 && data.longitude <= 180
+        && data.isActive is bool;
+    }
+    match /donationCentres/{centreId} {
+      allow read: if isAdmin() || (isDonor() && resource.data.isActive == true);
+      allow create: if isAdmin() && validDonationCentre(request.resource.data);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'address', 'district', 'phone', 'latitude', 'longitude', 'isActive'])
+        && validDonationCentre(request.resource.data);
+      allow delete: if false;
+    }
   }
 }
