@@ -444,7 +444,7 @@ export default function RootNavigator() {
   // ========================================
 
   return (
-    <NavigationContainer>
+    <NavigationContainer documentTitle={{ formatter: () => 'BloodConnect' }}>
 
       {user && profile ? (
 
