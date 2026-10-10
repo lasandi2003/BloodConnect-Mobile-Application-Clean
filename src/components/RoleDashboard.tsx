@@ -1,5 +1,6 @@
 import React, {
   type ComponentProps,
+  type ReactNode,
   useState,
 } from 'react';
 
@@ -36,6 +37,9 @@ export interface DashboardItem {
   title: string;
   description: string;
   icon: IconName;
+
+  // ADD THIS
+  onPress?: () => void;
 }
 
 interface Props {
@@ -114,10 +118,12 @@ export default function RoleDashboard({
         }
       >
         {/* Header */}
+
         <View
           style={styles.header}
         >
           {/* User information */}
+
           <View
             style={
               styles.headerText
@@ -141,6 +147,7 @@ export default function RoleDashboard({
           </View>
 
           {/* Logout button */}
+
           <Pressable
             style={
               styles.logoutButton
@@ -160,6 +167,7 @@ export default function RoleDashboard({
         </View>
 
         {/* Hero section */}
+
         <View
           style={styles.hero}
         >
@@ -179,13 +187,21 @@ export default function RoleDashboard({
         </View>
 
         {/* Dashboard cards */}
+
         <View
           style={styles.grid}
         >
           {items.map(item => (
-            <View
+            <Pressable
               key={item.title}
-              style={styles.card}
+              style={({ pressed }) => [
+                styles.card,
+                pressed &&
+                  styles.cardPressed,
+              ]}
+              onPress={
+                item.onPress
+              }
             >
               <View
                 style={
@@ -228,12 +244,13 @@ export default function RoleDashboard({
                 size={18}
                 color="#B9B9B9"
               />
-            </View>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
 
       {/* Logout confirmation modal */}
+
       <Modal
         visible={
           logoutModalVisible
@@ -314,7 +331,6 @@ export default function RoleDashboard({
               <Pressable
                 style={[
                   styles.signOutButton,
-
                   loggingOut &&
                     styles.disabledButton,
                 ]}
@@ -388,10 +404,8 @@ const styles =
       width: 42,
       height: 42,
       borderRadius: 21,
-
       backgroundColor:
         COLORS.primaryLight,
-
       alignItems: 'center',
       justifyContent:
         'center',
@@ -400,24 +414,17 @@ const styles =
     hero: {
       padding: 20,
       borderRadius: 18,
-
       backgroundColor:
         COLORS.primary,
-
       marginBottom: 18,
-
       shadowColor:
         COLORS.primaryDark,
-
       shadowOpacity: 0.12,
-
       shadowRadius: 8,
-
       shadowOffset: {
         width: 0,
         height: 4,
       },
-
       elevation: 3,
     },
 
@@ -430,10 +437,8 @@ const styles =
 
     subtitle: {
       marginTop: 7,
-
       fontSize: 13,
       lineHeight: 19,
-
       color: '#FFEAEA',
     },
 
@@ -443,36 +448,32 @@ const styles =
 
     card: {
       minHeight: 88,
-
       padding: 15,
-
       backgroundColor:
         COLORS.white,
-
       borderRadius: 14,
-
       borderWidth: 1,
       borderColor:
         COLORS.border,
-
       flexDirection: 'row',
       alignItems: 'center',
+    },
+
+    // ADD THIS
+    cardPressed: {
+      opacity: 0.7,
     },
 
     iconCircle: {
       width: 44,
       height: 44,
       borderRadius: 22,
-
       backgroundColor:
         COLORS.primaryLight,
-
       justifyContent:
         'center',
-
       alignItems:
         'center',
-
       marginRight: 12,
     },
 
@@ -489,41 +490,31 @@ const styles =
 
     cardDescription: {
       marginTop: 4,
-
       fontSize: 12,
       lineHeight: 17,
-
       color:
         COLORS.textSecondary,
     },
 
     modalOverlay: {
       flex: 1,
-
       backgroundColor:
         'rgba(0, 0, 0, 0.45)',
-
       justifyContent:
         'center',
-
       alignItems:
         'center',
-
       paddingHorizontal: 25,
     },
 
     modalCard: {
       width: '100%',
       maxWidth: 360,
-
       backgroundColor:
         COLORS.white,
-
       borderRadius: 20,
-
       paddingHorizontal: 24,
       paddingVertical: 28,
-
       alignItems:
         'center',
     },
@@ -531,69 +522,51 @@ const styles =
     modalIcon: {
       width: 58,
       height: 58,
-
       borderRadius: 29,
-
       backgroundColor:
         COLORS.primaryLight,
-
       justifyContent:
         'center',
-
       alignItems:
         'center',
-
       marginBottom: 16,
     },
 
     modalTitle: {
       fontSize: 21,
       fontWeight: '800',
-
       color:
         COLORS.text,
     },
 
     modalMessage: {
       marginTop: 8,
-
       fontSize: 14,
       lineHeight: 20,
-
       color:
         COLORS.textSecondary,
-
       textAlign:
         'center',
     },
 
     modalButtons: {
       width: '100%',
-
       flexDirection: 'row',
-
       gap: 10,
-
       marginTop: 24,
     },
 
     cancelButton: {
       flex: 1,
-
       height: 48,
-
       borderRadius: 10,
-
       borderWidth: 1,
       borderColor:
         COLORS.border,
-
       backgroundColor:
         COLORS.white,
-
       justifyContent:
         'center',
-
       alignItems:
         'center',
     },
@@ -601,24 +574,18 @@ const styles =
     cancelButtonText: {
       fontSize: 14,
       fontWeight: '700',
-
       color:
         COLORS.text,
     },
 
     signOutButton: {
       flex: 1,
-
       height: 48,
-
       borderRadius: 10,
-
       backgroundColor:
         COLORS.primary,
-
       justifyContent:
         'center',
-
       alignItems:
         'center',
     },
@@ -626,7 +593,6 @@ const styles =
     signOutButtonText: {
       fontSize: 14,
       fontWeight: '700',
-
       color:
         COLORS.white,
     },

@@ -31,6 +31,8 @@ import type {
   UserRole,
 } from '../../../types/auth';
 
+import { buildInitialApprovalFields, getApprovalStatus, requiresAdminApproval } from '../utils/roleApproval';
+
 const USERS_COLLECTION = 'users';
 
 const validRoles: UserRole[] = [
@@ -73,6 +75,12 @@ export async function getUserProfile(
     healthcareType: data.healthcareType,
     status: data.status ?? 'active',
     photoURL: data.photoURL ?? undefined,
+    ...(requiresAdminApproval(role) ? {
+      approvalStatus: getApprovalStatus(data.approvalStatus),
+      institutionName: typeof data.institutionName === 'string' ? data.institutionName : undefined,
+      designation: typeof data.designation === 'string' ? data.designation : undefined,
+      employeeId: typeof data.employeeId === 'string' ? data.employeeId : undefined,
+    } : {}),
   };
 }
 
@@ -95,6 +103,7 @@ async function recordSuccessfulLogin(
 export async function registerAccount(
   input: RegisterInput,
 ): Promise<UserProfile> {
+  const approvalFields = buildInitialApprovalFields(input.role, input);
   const credential =
     await createUserWithEmailAndPassword(
       auth,
@@ -117,6 +126,7 @@ export async function registerAccount(
       phone: input.phone.trim(),
       role: input.role,
       status: 'active',
+      ...approvalFields,
       ...(input.healthcareType
         ? {
             healthcareType: input.healthcareType,
@@ -154,6 +164,7 @@ export async function completeSocialProfile(
   user: User,
   input: SocialProfileInput,
 ): Promise<UserProfile> {
+  const approvalFields = buildInitialApprovalFields(input.role, input);
   const profile: UserProfile = {
     uid: user.uid,
     fullName:
@@ -164,7 +175,8 @@ export async function completeSocialProfile(
     phone: input.phone.trim(),
     role: input.role,
     status: 'active',
-    photoURL: user.photoURL ?? undefined,
+    ...approvalFields,
+    ...(user.photoURL ? { photoURL: user.photoURL } : {}),
     ...(input.healthcareType
       ? {
           healthcareType: input.healthcareType,
