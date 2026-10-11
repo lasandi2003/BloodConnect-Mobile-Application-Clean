@@ -19,7 +19,15 @@ export type UserStatus =
   | 'active'
   | 'suspended';
 
-export interface UserProfile {
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ProfessionalDetails {
+  institutionName?: string;
+  designation?: string;
+  employeeId?: string;
+}
+
+export interface UserProfile extends ProfessionalDetails {
   uid: string;
   fullName: string;
   email: string;
@@ -28,9 +36,10 @@ export interface UserProfile {
   healthcareType?: HealthcareType;
   status: UserStatus;
   photoURL?: string;
+  approvalStatus?: ApprovalStatus;
 }
 
-export interface RegisterInput {
+export interface RegisterInput extends ProfessionalDetails {
   fullName: string;
   email: string;
   phone: string;
@@ -39,7 +48,7 @@ export interface RegisterInput {
   healthcareType?: HealthcareType;
 }
 
-export interface SocialProfileInput {
+export interface SocialProfileInput extends ProfessionalDetails {
   fullName: string;
   phone: string;
   role: RegistrationRole;

@@ -35,6 +35,7 @@ import {
 } from '../../../constants/colors';
 
 import AuthInput from '../components/AuthInput';
+import { buildInitialApprovalFields, requiresAdminApproval } from '../utils/roleApproval';
 
 import {
   useAuth,
@@ -79,6 +80,11 @@ export default function RegisterScreen({
   const {
     register,
   } = useAuth();
+
+  const staffApplication = requiresAdminApproval(role);
+  const [institutionName, setInstitutionName] = useState('');
+  const [designation, setDesignation] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
 
   const [
     fullName,
@@ -230,6 +236,7 @@ export default function RegisterScreen({
     }
 
     try {
+      buildInitialApprovalFields(role, { institutionName, designation, employeeId });
       setLoading(true);
 
       await register({
@@ -249,6 +256,7 @@ export default function RegisterScreen({
         role,
 
         healthcareType,
+        ...(staffApplication ? { institutionName, designation, employeeId } : {}),
       });
     } catch (error) {
       showMessage(
@@ -392,6 +400,14 @@ export default function RegisterScreen({
             </View>
           </View>
         ) : null}
+
+        {staffApplication && <>
+          <Text style={styles.staffLabel}>Professional Details</Text>
+          <AuthInput label={role === 'healthcare' ? 'Hospital / Institution Name' : 'Blood Bank Name'} icon="business-outline" placeholder="Registered institution name" value={institutionName} onChangeText={setInstitutionName} maxLength={150} />
+          <AuthInput label="Designation" icon="briefcase-outline" placeholder="Your professional designation" value={designation} onChangeText={setDesignation} maxLength={100} />
+          <AuthInput label="Employee ID" icon="id-card-outline" placeholder="Your employee ID" value={employeeId} onChangeText={setEmployeeId} maxLength={50} autoCapitalize="none" />
+          <Text style={styles.roleText}>Your account will await administrator approval before staff access is enabled.</Text>
+        </>}
 
         <AuthInput
           label="Password"

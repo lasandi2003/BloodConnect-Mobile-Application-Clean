@@ -15,6 +15,7 @@ import DonationConfirmationScreen from '../screens/DonationConfirmationScreen';
 import DonationHistoryScreen from '../screens/DonationHistoryScreen';
 
 import DonorProfileScreen from '../screens/DonorProfileScreen';
+import FindDonationCentresScreen from '../screens/FindDonationCentresScreen';
 
 import type {
   DonorStackParamList,
@@ -37,6 +38,7 @@ export default function DonorNavigator() {
           'slide_from_right',
       }}
     >
+      <Stack.Screen name="FindDonationCentres" component={FindDonationCentresScreen} />
       <Stack.Screen
         name="DonorDashboard"
         component={

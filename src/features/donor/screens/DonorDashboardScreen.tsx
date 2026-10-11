@@ -424,6 +424,20 @@ export default function DonorDashboardScreen() {
             </Pressable>
           </View>
 
+          <Pressable
+            style={styles.centreShortcut}
+            onPress={() => navigation.navigate('FindDonationCentres')}
+            accessibilityRole="button"
+            accessibilityLabel="Find nearby donation centres"
+          >
+            <Ionicons name="location-outline" size={25} color={COLORS.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.centreShortcutTitle}>Find Nearby Donation Centres</Text>
+              <Text style={styles.centreShortcutDescription}>Search locations and plan your visit</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={COLORS.primary} />
+          </Pressable>
+
           {/* LOADING */}
 
           {loading ? (
@@ -937,6 +951,9 @@ export default function DonorDashboardScreen() {
 
 const styles =
   StyleSheet.create({
+    centreShortcut: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, marginBottom: 18, borderRadius: 16, borderWidth: 1, borderColor: COLORS.border, backgroundColor: COLORS.white },
+    centreShortcutTitle: { color: COLORS.text, fontSize: 15, fontWeight: '700' },
+    centreShortcutDescription: { color: COLORS.textSecondary, fontSize: 12, marginTop: 5, lineHeight: 18 },
     screen: {
       flex: 1,
     },

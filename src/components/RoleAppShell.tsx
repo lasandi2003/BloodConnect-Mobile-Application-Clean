@@ -11,17 +11,11 @@ import {
   View,
 } from 'react-native';
 
-import {
-  Ionicons,
-} from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 
-import {
-  SafeAreaView,
-} from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  COLORS,
-} from '../constants/colors';
+import { COLORS } from '../constants/colors';
 
 import PlaceholderScreen from './PlaceholderScreen';
 
@@ -33,14 +27,8 @@ type TabKey =
   | 'home'
   | 'activity'
   | 'services'
-  | 'profile';
-
-interface TabItem {
-  key: TabKey;
-  label: string;
-  icon: IconName;
-  activeIcon: IconName;
-}
+  | 'profile'
+  | 'reports';
 
 interface PlaceholderConfig {
   title: string;
@@ -49,10 +37,25 @@ interface PlaceholderConfig {
 
 interface Props {
   home: ReactNode;
+
+  activityContent?: ReactNode;
+  servicesContent?: ReactNode;
+
   activity: PlaceholderConfig;
+
   services: PlaceholderConfig;
+
   profile: PlaceholderConfig;
+
+  profileContent?: ReactNode;
+
+  reportsContent?: ReactNode;
+
+  reports?: PlaceholderConfig;
+
+
   tabLabels?: Partial<Record<TabKey, string>>;
+
   tabIcons?: Partial<
     Record<
       TabKey,
@@ -62,84 +65,156 @@ interface Props {
       }
     >
   >;
+
+  activeTabColor?: string;
+  bottomBorderColor?: string;
+  initialTab?: TabKey;
+  tabPressHandlers?: Partial<Record<TabKey, () => void>>;
+
+  showReports?: boolean;
+
 }
 
-const defaultTabs: TabItem[] = [
+const defaultTabs = [
   {
-    key: 'home',
+    key: 'home' as TabKey,
     label: 'Home',
-    icon: 'home-outline',
-    activeIcon: 'home',
+    icon: 'home-outline' as IconName,
+    activeIcon: 'home' as IconName,
   },
+
   {
-    key: 'activity',
+    key: 'activity' as TabKey,
     label: 'Activity',
-    icon: 'list-outline',
-    activeIcon: 'list',
+    icon: 'list-outline' as IconName,
+    activeIcon: 'list' as IconName,
   },
+
   {
-    key: 'services',
+    key: 'services' as TabKey,
     label: 'Services',
-    icon: 'apps-outline',
-    activeIcon: 'apps',
+    icon: 'apps-outline' as IconName,
+    activeIcon: 'apps' as IconName,
   },
+
   {
-    key: 'profile',
+    key: 'profile' as TabKey,
     label: 'Profile',
-    icon: 'person-outline',
-    activeIcon: 'person',
+    icon: 'person-outline' as IconName,
+    activeIcon: 'person' as IconName,
+  },
+
+  {
+    key: 'reports' as TabKey,
+    label: 'Reports',
+    icon: 'bar-chart-outline' as IconName,
+    activeIcon: 'bar-chart' as IconName,
   },
 ];
 
 export default function RoleAppShell({
   home,
+  activityContent,
+  servicesContent,
   activity,
+
   services,
   profile,
+
+  profileContent,
+
+  reports,
+  reportsContent,
+
+
   tabLabels,
   tabIcons,
-}: Props) {
-  const [activeTab, setActiveTab] =
-    useState<TabKey>('home');
 
-  const tabs = defaultTabs.map(tab => ({
-    ...tab,
-    label: tabLabels?.[tab.key] ?? tab.label,
-    icon:
-      tabIcons?.[tab.key]?.icon ??
-      tab.icon,
-    activeIcon:
-      tabIcons?.[tab.key]?.activeIcon ??
-      tab.activeIcon,
-  }));
+  activeTabColor = COLORS.primary,
+  bottomBorderColor = COLORS.border,
+  initialTab = 'home',
+  tabPressHandlers,
+
+  showReports = false,
+
+}: Props) {
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+
+  const tabs = defaultTabs
+    .filter(tab => {
+      // Show Reports only when enabled
+      if (tab.key === 'reports') {
+        return showReports;
+      }
+
+      // When Reports is enabled,
+      // hide Profile.
+      if (
+        tab.key === 'profile' &&
+        showReports
+      ) {
+        return false;
+      }
+
+      return true;
+    })
+    .map(tab => ({
+      ...tab,
+
+      label:
+        tabLabels?.[tab.key] ??
+        tab.label,
+
+      icon:
+        tabIcons?.[tab.key]?.icon ??
+        tab.icon,
+
+      activeIcon:
+        tabIcons?.[tab.key]?.activeIcon ??
+        tab.activeIcon,
+    }));
 
   let content: ReactNode = home;
 
+  // INVENTORY
   if (activeTab === 'activity') {
-    content = (
-      <PlaceholderScreen
-        title={activity.title}
-        description={activity.description}
-      />
+    content = activityContent ?? (
+      <PlaceholderScreen title={activity.title} description={activity.description} />
     );
   }
 
+  // REQUESTS
   if (activeTab === 'services') {
-    content = (
-      <PlaceholderScreen
-        title={services.title}
-        description={services.description}
-      />
+    content = servicesContent ?? (
+      <PlaceholderScreen title={services.title} description={services.description} />
     );
   }
 
+  // PROFILE
   if (activeTab === 'profile') {
-    content = (
+    content = profileContent ?? (
       <PlaceholderScreen
         title={profile.title}
         description={profile.description}
       />
     );
+  }
+
+  // REPORTS
+  if (activeTab === 'reports') {
+    content =
+      reportsContent ?? (
+        <PlaceholderScreen
+          title={
+            reports?.title ??
+            'Inventory Reports'
+          }
+          description={
+            reports?.description ??
+            'View blood inventory reports.'
+          }
+        />
+      );
   }
 
   return (
@@ -151,7 +226,12 @@ export default function RoleAppShell({
         {content}
       </View>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { borderTopColor: bottomBorderColor },
+        ]}
+      >
         {tabs.map(tab => {
           const isActive =
             activeTab === tab.key;
@@ -160,29 +240,45 @@ export default function RoleAppShell({
             <Pressable
               key={tab.key}
               style={styles.tabButton}
-              onPress={() =>
-                setActiveTab(tab.key)
-              }
+              onPress={() => {
+                const handler = tabPressHandlers?.[tab.key];
+                if (handler) {
+                  handler();
+                  return;
+                }
+                setActiveTab(tab.key);
+              }}
             >
-              <Ionicons
-                name={
-                  isActive
-                    ? tab.activeIcon
-                    : tab.icon
-                }
-                size={21}
-                color={
-                  isActive
-                    ? COLORS.primary
-                    : '#8A8A8A'
-                }
-              />
+
+              <View
+                style={[
+                  styles.iconContainer,
+                  isActive &&
+                    styles.activeIconContainer,
+                ]}
+              >
+                <Ionicons
+                  name={
+                    isActive
+                      ? tab.activeIcon
+                      : tab.icon
+                  }
+                  size={21}
+                  color={
+                    isActive
+                      ? activeTabColor
+                      : '#8A8A8A'
+                  }
+                />
+              </View> 
 
               <Text
                 style={[
                   styles.tabLabel,
-                  isActive &&
-                    styles.activeTabLabel,
+                isActive && [
+                  styles.activeTabLabel,
+                  { color: activeTabColor },
+                ],
                 ]}
                 numberOfLines={1}
               >
@@ -223,6 +319,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
+  },
+
+  iconContainer: {
+    width: 30,
+    height: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 15,
+  },
+
+  activeIconContainer: {
+    backgroundColor: '#FDE7EA',
   },
 
   tabLabel: {

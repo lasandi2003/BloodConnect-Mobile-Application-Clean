@@ -1,0 +1,20 @@
+{
+  "name": "bloodconnect-firestore-rules-tests",
+  "private": true,
+  "description": "Isolated emulator-only security tests; no production Firebase connection",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project demo-bloodconnect-approval --config ../../firebase.emulator.json \"node --test --test-concurrency=1 approval.rules.test.cjs\"",
+    "test:running-emulator": "node --test --test-concurrency=1 approval.rules.test.cjs"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.33.0"
+  },
+  "dependencies": {
+    "bloodconnect-mobile-application-clean": "file:../.."
+  }
+}
